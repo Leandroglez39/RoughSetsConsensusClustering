@@ -888,13 +888,11 @@ class Matrix:
 
         print('Calculating edges')        
 
-        #np.savetxt(path, match_array/len(communities), delimiter=',', fmt='%f')
+
 
         # Find the indices where match_array is greater than or equal to b0
         i, j = np.where(match_array >= b0)
 
-        
-        #TODO: AÑADIR EL NUEVO CRITERIO
         
         
         # Use those indices to create the edges_list
@@ -922,17 +920,16 @@ class Matrix:
         seeds.sort(key=len, reverse=True)
 
         print('Calculating k')
-        #k = self.calculate_k(communities)
+
+     
+
         k = self.calculate_k_porcentual(communities, porcent=0.91)
 
         k = int(k)
 
         print('Real k: ' + str(k + 1))
         
-        # with open(path, 'w+') as f:
-        #     for i in range(k + 1):
-        #         f.write(' '.join(map(str, seeds[i].nodes())) + '\n')
-            
+       
         
         # list of set of nodes that represents the  coverage of the graph . The first set is the inferior coverage and the second set is the superior coverage.
         coverage_inferior = [set() for _ in range(k + 1)]
@@ -1171,7 +1168,7 @@ class Matrix:
         #sort data_array
         data_array.sort()
         
-        #calculate the index where the acumulate sum is the 95% of the total sum
+        #calculate the index where the acumulate sum is the porcent value ( default = 91%) of the total sum
         index = np.argmax(np.cumsum(data_array) > porcent * np.sum(data_array))
 
         return data_array[index]
@@ -2220,7 +2217,21 @@ def nmi_overlapping_evaluateTunning_(foldername: str, gamma: str = '') -> None:
         pickle.dump(dictResult, open('output/' + foldername + '/' + foldername + '_result.pkl', 'wb'))
         
 
-def runRoughClustering(m : Matrix, folder_version = 'NetsType_1.1', gamma = 0.8, n=0 , top=10 , saved = False):
+def runRoughClustering(m : Matrix, folder_version = 'NetsType_1.4', gamma = 0.8, n=0 , top=10 , saved = False):
+    """
+    Runs the Rough Clustering algorithm on the given matrix.
+
+    Parameters:
+    - m (Matrix): The input matrix.
+    - folder_version (str): The folder version.
+    - gamma (float): The gamma value.
+    - n (int): The starting index for iterations.
+    - top (int): The number of iterations to run.
+    - saved (bool): Indicates whether to load saved results or not.
+
+    Returns:
+    None
+    """
 
     all_iterations = []
     
@@ -2265,10 +2276,16 @@ def runRoughClustering(m : Matrix, folder_version = 'NetsType_1.1', gamma = 0.8,
                     all_iterations.append([list(x) for x in result]) # type: ignore
                 print('Louvain Algorithm finished')
 
-                print(f'Infomap Algorithm loading {str(top)} times in {net}')
-                infomap_results = pickle.load(open(f'output/{folder_version}/{net}_Infomap.pkl', 'rb'))
-                all_iterations.extend(infomap_results) # type: ignore
-                print('Infomap Algorithm finished')
+
+
+                ################################################################################################
+                # For run this part of code, you need to have the Infomap's output files in the output folder. #
+                ################################################################################################
+
+                # print(f'Infomap Algorithm loading {str(top)} times in {net}')
+                # infomap_results = pickle.load(open(f'output/{folder_version}/{net}_Infomap.pkl', 'rb'))
+                # all_iterations.extend(infomap_results) # type: ignore
+                # print('Infomap Algorithm finished')
 
                 print(len(all_iterations))
                 value = m.RoughClustering(communities=all_iterations, gamma=gamma, path=f'dataset/{folder_version}/{net}/{net}_similarity.csv')
