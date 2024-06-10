@@ -2311,6 +2311,95 @@ def runRoughClustering(m : Matrix, folder_version = 'NetsType_1.4', gamma = 0.8,
                 m.export_RC(f'{folder_version}/', f'/{net}_RC.txt', value)
               
                 
+def runRoughClusteringCDLib(m : Matrix, folder_version = 'NetsType_1.4', gamma = 0.8, n=0 , top=10 , saved = False):
+    """
+    Runs the Rough Clustering algorithm on the given matrix.
+
+    Parameters:
+    - m (Matrix): The input matrix.
+    - folder_version (str): The folder version.
+    - gamma (float): The gamma value.
+    - n (int): The starting index for iterations.
+    - top (int): The number of iterations to run.
+    - saved (bool): Indicates whether to load saved results or not.
+
+    Returns:
+    None
+    """
+    from cdlib import algorithms
+    
+    all_iterations = []
+    
+    if os.path.exists(f'dataset/{folder_version}'):
+        list_dir = os.listdir(f'dataset/{folder_version}')
+
+        list_dir.remove('README.txt')
+        list_dir.remove('GT')
+
+        for net in list_dir:
+        
+            m.G = pickle.load(open(f'dataset/{folder_version}/{net}/{net}.pkl', 'rb'))
+
+            if not saved:
+            
+                print(f'async_lpa Algorithm running ' + str(top) + f' times in {net}')
+                for _ in range(n, top):
+                    result = nx.algorithms.community.label_propagation.asyn_lpa_communities(m.G, seed=random.randint(0, 10000))
+                    communities = [list(x) for x in result]
+                    if len(communities) > 1:
+                        all_iterations.append(communities) # type: ignore
+                    #print(all_iterations[-1])
+                print('async_lpa Algorithm finished')
+                
+                # Range of Resolution 3.5 - 5.5
+                print(f'Greedy Algorithm running {str(1)} times in {net}')
+                for _ in range(0, 1):
+                    result = nx.algorithms.community.greedy_modularity_communities(m.G, resolution= random.uniform(3.5, 5.5))  # type: ignore
+                    result = [list(x) for x in result] # type: ignore
+                    
+                    for _ in range(0, int(top/1.5)):        
+                        all_iterations.append(result) 
+                    #print(all_iterations[-1])
+
+                print(f'Greedy Algorithm finished')
+
+                # Range of Resolution 2 - 3.5
+                print(f'Louvain Algorithm running {str(top)}  times in {net}')
+                for _ in range(n, top):
+                    result = nx.algorithms.community.louvain.louvain_communities(m.G, seed=random.randint(0, 10000), resolution= random.uniform(2, 3.5)) # type: ignore
+                    #print(result)
+                    all_iterations.append([list(x) for x in result]) # type: ignore
+                print('Louvain Algorithm finished')
+                
+
+                print(f'Infomap Algorithm loading {str(top)} times in {net}')
+                for _ in range(n, top):
+                    result = algorithms.infomap(m.G, flags='--seed ' + str(random.randint(0,1000)))
+                    communities = [list(x) for x in result.communities]
+                    all_iterations.append(communities) # type: ignore
+                
+                print('Infomap Algorithm finished')
+
+                print(len(all_iterations))
+                value = m.RoughClustering(communities=all_iterations, gamma=gamma, path=f'dataset/{folder_version}/{net}/{net}_similarity.csv')
+
+                all_iterations = []
+
+
+                exportpath_RC = f'/{net}_RC.txt'
+
+                m.export_RC(folder_version, exportpath_RC, value)
+
+            else:
+                file_num = 100 if folder_version == 'NetsType_1.6' else 1000
+                algorithm_names = ['async_lpa', 'greedy', 'louvain', 'infomap']
+                for algorithm in algorithm_names:
+                    all_iterations.extend(pickle.load(open(f'output/stability/{folder_version}/{net}/{algorithm}_{file_num}_run_0.pkl', 'rb'))[n:top]) # type: ignore
+                
+                value = m.RoughClustering(communities=all_iterations, gamma=gamma, path=f'output/{folder_version}/k_update/{net}_RC.txt')
+                all_iterations = []
+                m.export_RC(f'{folder_version}/', f'/{net}_RC.txt', value)
+              
 
 
 def runRoughClustering_on_FlyCircuit(m: Matrix ,version_dataset: str,  iterations: list):
@@ -4051,8 +4140,7 @@ def influent_cut_ratio(G: nx.DiGraph, communities: list[list[int]]) -> dict[str,
 
 if __name__ == '__main__':
 
-  runRoughClustering(m = Matrix([], {},[]), folder_version = 'NetsType_1.4')
-    
-    
+  # Run the Rough Clustering algorithm for the the all networks in the folder given into the parameter 'folder_version'  
+  runRoughClusteringCDLib(m = Matrix([], {},[]), folder_version = 'NetsType_1.4')
 
-   
+    
