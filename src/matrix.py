@@ -4190,24 +4190,24 @@ if __name__ == '__main__':
     # Set the folder version (NetsType_1.4' or 'NetsType_1.6')
     folder_version = 'NetsType_1.4'
 
-    # # Run the Rough Clustering algorithm for the the all networks in the folder given into the parameter 'folder_version'  
-    #runRoughClusteringCDLib(m = Matrix([], {},[]), folder_version = folder_version, gamma=0.8)
+    # Run the Rough Clustering algorithm for the the all networks in the folder given into the parameter 'folder_version'  
+    runRoughClusteringCDLib(m = Matrix([], {},[]), folder_version = folder_version, gamma=0.8)
 
-    # # Evaluate the overlapping normalized mutual information for the Rough Clustering algorithm for the all networks in the 
-    # # folder given into the parameter 'folder_version'
-    # nmi_overlapping_evaluate(folder_version)
+    # Evaluate the overlapping normalized mutual information for the Rough Clustering algorithm for the all networks in the 
+    # folder given into the parameter 'folder_version'
+    nmi_overlapping_evaluate(folder_version)
 
-    # # Calculate the percentage of core nodes that are in the GT communities
-    # # The result is saved in the file 'RC_cores_percent.txt'
-    # compare_cores_with_GT_simple(folder_version)
+    # Calculate the percentage of core nodes that are in the GT communities
+    # The result is saved in the file 'RC_cores_percent.txt'
+    compare_cores_with_GT_simple(folder_version)
 
-    # # Calculate the Partition Coefficient for the Rough Clustering algorithm for the all networks in the folder given into the 
-    # # parameter 'folder_version'
-    # apply_PC_to_RC(folder_version, overlap=True)
+    # Calculate the Partition Coefficient for the Rough Clustering algorithm for the all networks in the folder given into the 
+    # parameter 'folder_version'
+    apply_PC_to_RC(folder_version, overlap=True)
 
-    # # Calculate the Partition Coefficient for the Ground Truth communities for the all networks in the folder given into the
-    # # parameter 'folder_version'
-    # apply_PC_to_GT(folder_version, overlap=True)
+    # Calculate the Partition Coefficient for the Ground Truth communities for the all networks in the folder given into the
+    # parameter 'folder_version'
+    apply_PC_to_GT(folder_version, overlap=True)
 
     # Export the overlapping nodes scores by the Partition Coefficient for the Rough Clustering algorithm and the Ground Truth
     export_pc_overlaping_nodes_gt(folder_version)
