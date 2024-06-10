@@ -4201,10 +4201,13 @@ if __name__ == '__main__':
     # # The result is saved in the file 'RC_cores_percent.txt'
     # compare_cores_with_GT_simple(folder_version)
 
-    # Calculate the Partition Coefficient for the Rough Clustering algorithm for the all networks in the folder given into the 
-    # parameter 'folder_version'
-    apply_PC_to_RC(folder_version, overlap=True)
+    # # Calculate the Partition Coefficient for the Rough Clustering algorithm for the all networks in the folder given into the 
+    # # parameter 'folder_version'
+    # apply_PC_to_RC(folder_version, overlap=True)
 
-    # Calculate the Partition Coefficient for the Ground Truth communities for the all networks in the folder given into the
-    # parameter 'folder_version'
-    apply_PC_to_GT(folder_version, overlap=True)
+    # # Calculate the Partition Coefficient for the Ground Truth communities for the all networks in the folder given into the
+    # # parameter 'folder_version'
+    # apply_PC_to_GT(folder_version, overlap=True)
+
+    # Export the overlapping nodes scores by the Partition Coefficient for the Rough Clustering algorithm and the Ground Truth
+    export_pc_overlaping_nodes_gt(folder_version)
