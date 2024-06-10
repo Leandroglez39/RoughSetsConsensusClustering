@@ -2346,6 +2346,8 @@ def runRoughClusteringCDLib(m : Matrix, folder_version = 'NetsType_1.4', gamma =
                 for _ in range(n, top):
                     result = nx.algorithms.community.label_propagation.asyn_lpa_communities(m.G, seed=random.randint(0, 10000))
                     communities = [list(x) for x in result]
+                    m.export_Simple(folder_version, f'/{net}_Lpa.txt', communities)
+                    
                     if len(communities) > 1:
                         all_iterations.append(communities) # type: ignore
                     #print(all_iterations[-1])
@@ -2356,7 +2358,8 @@ def runRoughClusteringCDLib(m : Matrix, folder_version = 'NetsType_1.4', gamma =
                 for _ in range(0, 1):
                     result = nx.algorithms.community.greedy_modularity_communities(m.G, resolution= random.uniform(3.5, 5.5))  # type: ignore
                     result = [list(x) for x in result] # type: ignore
-                    
+                    m.export_Simple(folder_version, f'/{net}_Greedy.txt', result)
+
                     for _ in range(0, int(top/1.5)):        
                         all_iterations.append(result) 
                     #print(all_iterations[-1])
@@ -2367,8 +2370,9 @@ def runRoughClusteringCDLib(m : Matrix, folder_version = 'NetsType_1.4', gamma =
                 print(f'Louvain Algorithm running {str(top)}  times in {net}')
                 for _ in range(n, top):
                     result = nx.algorithms.community.louvain.louvain_communities(m.G, seed=random.randint(0, 10000), resolution= random.uniform(2, 3.5)) # type: ignore
-                    #print(result)
-                    all_iterations.append([list(x) for x in result]) # type: ignore
+                    result = [list(x) for x in result]
+                    m.export_Simple(folder_version, f'/{net}_Louvain.txt', result) 
+                    all_iterations.append(result) # type: ignore
                 print('Louvain Algorithm finished')
                 
 
@@ -2376,6 +2380,7 @@ def runRoughClusteringCDLib(m : Matrix, folder_version = 'NetsType_1.4', gamma =
                 for _ in range(n, top):
                     result = algorithms.infomap(m.G, flags='--seed ' + str(random.randint(0,1000)))
                     communities = [list(x) for x in result.communities]
+                    m.export_Simple(folder_version, f'/{net}_Infomap.txt', communities)
                     all_iterations.append(communities) # type: ignore
                 
                 print('Infomap Algorithm finished')
@@ -2388,6 +2393,7 @@ def runRoughClusteringCDLib(m : Matrix, folder_version = 'NetsType_1.4', gamma =
 
                 exportpath_RC = f'/{net}_RC.txt'
 
+                m.export_Simple(folder_version, f'/{net}_RC_cores.txt', [list(x) for x in value[0]])
                 m.export_RC(folder_version, exportpath_RC, value)
 
             else:
@@ -3551,6 +3557,47 @@ def compare_cores_with_GT(foldername: str):
     
     print(results)
 
+def compare_cores_with_GT_simple(foldername: str):
+
+    #path_GT = f'dataset/{foldername}/GT/'
+    path_GT = f'output/{foldername}/'
+    path_cores = f'output/{foldername}/'
+    algorithms_names = ['Louvain', 'Infomap', 'Greedy', 'Lpa']
+
+   
+    results = []
+
+    for i in range(1, 12):
+        dict_count = {}
+        dict_match = {}
+        GT_data = read_communities_from_dat(path_GT + f'network{i}_{algorithms_names[3]}.txt')
+        cores_data = read_communities_from_dat(path_cores + f'network{i}_RC_cores.txt')
+
+        for com in cores_data:
+            if len(com) > 1:
+                for nodes in GT_data:
+                    for node in com:
+                        if node in nodes:
+                            dict_count[node] = dict_count.get(node, 0) + len(set(com).intersection(set(nodes))) - 1
+    
+        for key, value in dict_count.items():
+            for nodes in cores_data:
+                if key in nodes:
+                    dict_match[key] = dict_match.get(key, 0) + value / len(nodes) * 100
+                    continue
+        
+        average = sum(dict_match.values()) / len(dict_match.values())
+
+        results.append((f'network{i}: ', average))
+        
+    
+    print(results)
+
+    with open(f'output/{foldername}/RC_cores_percent.txt', 'w') as f:
+        for result in results:
+            f.write(f'{result[0]} {result[1]}\n')
+
+
 def overlapping_count_in_cores(foldername = 'NetsType_1.6'):
     
     path_GT = f'dataset/{foldername}/GT/'
@@ -4140,7 +4187,24 @@ def influent_cut_ratio(G: nx.DiGraph, communities: list[list[int]]) -> dict[str,
 
 if __name__ == '__main__':
 
-  # Run the Rough Clustering algorithm for the the all networks in the folder given into the parameter 'folder_version'  
-  runRoughClusteringCDLib(m = Matrix([], {},[]), folder_version = 'NetsType_1.4')
+    # Set the folder version (NetsType_1.4' or 'NetsType_1.6')
+    folder_version = 'NetsType_1.4'
 
-    
+    # # Run the Rough Clustering algorithm for the the all networks in the folder given into the parameter 'folder_version'  
+    #runRoughClusteringCDLib(m = Matrix([], {},[]), folder_version = folder_version, gamma=0.8)
+
+    # # Evaluate the overlapping normalized mutual information for the Rough Clustering algorithm for the all networks in the 
+    # # folder given into the parameter 'folder_version'
+    # nmi_overlapping_evaluate(folder_version)
+
+    # # Calculate the percentage of core nodes that are in the GT communities
+    # # The result is saved in the file 'RC_cores_percent.txt'
+    # compare_cores_with_GT_simple(folder_version)
+
+    # Calculate the Partition Coefficient for the Rough Clustering algorithm for the all networks in the folder given into the 
+    # parameter 'folder_version'
+    apply_PC_to_RC(folder_version, overlap=True)
+
+    # Calculate the Partition Coefficient for the Ground Truth communities for the all networks in the folder given into the
+    # parameter 'folder_version'
+    apply_PC_to_GT(folder_version, overlap=True)
