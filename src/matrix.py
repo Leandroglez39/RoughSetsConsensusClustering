@@ -38,12 +38,15 @@ class Matrix:
     G = nx.DiGraph()
     ady_list : list 
     G_small = nx.DiGraph()
-    
-    def __post_init__(self):        
-        self.list_nodes = pickle.load(open('./dataset/nodes.pkl', 'rb'))
-        self.pos_code_nodes = pickle.load(open('./dataset/pos_code_nodes.pkl', 'rb'))
-        self.ady_list = [[] for _ in range(len(self.list_nodes))]
-        
+    onFlyCircuit = False
+
+    def __post_init__(self):
+
+        if self.onFlyCircuit:        
+            self.list_nodes = pickle.load(open('./dataset/nodes.pkl', 'rb'))
+            self.pos_code_nodes = pickle.load(open('./dataset/pos_code_nodes.pkl', 'rb'))
+            self.ady_list = [[] for _ in range(len(self.list_nodes))]
+            
 
     def insert_nodes(self):
         self.G.add_nodes_from(self.list_nodes)
@@ -4048,7 +4051,7 @@ def influent_cut_ratio(G: nx.DiGraph, communities: list[list[int]]) -> dict[str,
 
 if __name__ == '__main__':
 
-  pass  
+  runRoughClustering(m = Matrix([], {},[]), folder_version = 'NetsType_1.4')
     
     
 
