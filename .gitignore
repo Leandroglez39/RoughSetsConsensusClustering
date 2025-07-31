@@ -12,7 +12,6 @@ output/
 *.csv
 *.gexf
 *.json
-*.txt
 *.log
 *.png
 *.jpg
@@ -20,6 +19,7 @@ output/
 *.adjlist
 *.zip
 *.gml
+*.txt
 output/edgesMeasure.csv
 testing.py
 
