@@ -4,6 +4,10 @@ venvlinux/
 envCDLib/
 envNX
 .vscode/
+src/__pycache__/
+output/flycircuit.gexf
+dataset/
+output/
 *.fly
 *.csv
 *.gexf
@@ -15,9 +19,7 @@ envNX
 *.jpeg
 *.adjlist
 *.zip
+*.gml
 output/edgesMeasure.csv
 testing.py
-src/__pycache__/
-output/flycircuit.gexf
-dataset/
-output/
+
