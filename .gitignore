@@ -1,7 +1,7 @@
 venv/
 venvlinux/
 .devcontainer/
-envCDLib
+envCDLib/
 envNX
 .vscode/
 *.fly
