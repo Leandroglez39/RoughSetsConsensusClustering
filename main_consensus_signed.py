@@ -42,3 +42,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # TODO: el consenso da igual las aproximaciones inferiores y superiores, revisar detalladamente.
