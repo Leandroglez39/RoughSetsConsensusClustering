@@ -2,6 +2,9 @@ venv/
 venvlinux/
 .devcontainer/
 envCDLib/
+dataset/
+output/
+communnities/
 envNX
 .vscode/
 src/__pycache__/
@@ -20,6 +23,8 @@ output/
 *.zip
 *.gml
 *.txt
+*.npy
+*.pkl
 output/edgesMeasure.csv
 testing.py
 
