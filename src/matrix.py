@@ -845,8 +845,8 @@ class Matrix:
             self.G.nodes[node][measure] = dict[node]
     
 
-    def RoughClustering(self, communities: list, path: str, gamma: float = 0.8 ):
 
+    def RoughClustering(self, communities: list, path: str, gamma: float = 0.8 ):
         '''
         This function is for calculate the rough clustering of a community list.
 
