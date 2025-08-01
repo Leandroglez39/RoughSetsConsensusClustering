@@ -171,7 +171,7 @@ def validate_and_fix_community_folder(folder_path: str, fixed_suffix: str = "_fi
         base = fname.replace(".npy", "")
         out_name = f"{base}{fixed_suffix}.npy"
         out_path = os.path.join(folder_path, out_name)
-        np.save(out_path, partition)
+        np.save(out_path, partition, allow_pickle=True)
         all_partitions.append(partition)
 
     return all_partitions
