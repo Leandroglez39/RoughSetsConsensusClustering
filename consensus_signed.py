@@ -89,6 +89,9 @@ def rough_clustering_signed(
             coverage_superior[max_index].update(group_j)
             coverage_inferior[max_index].update(group_j)
 
+    # Comprobar si coverage_inferior y coverage_superior son iguales
+    iguales = all(ci == cs for ci, cs in zip(coverage_inferior, coverage_superior)) and len(coverage_inferior) == len(coverage_superior)
+    print(f"¿coverage_inferior y coverage_superior son iguales?: {iguales}")
     return coverage_inferior, coverage_superior
 
 
@@ -171,7 +174,8 @@ def validate_and_fix_community_folder(folder_path: str, fixed_suffix: str = "_fi
         base = fname.replace(".npy", "")
         out_name = f"{base}{fixed_suffix}.npy"
         out_path = os.path.join(folder_path, out_name)
-        np.save(out_path, partition, allow_pickle=True)
+        # Guardar siempre, sobrescribiendo si existe
+        np.save(out_path, np.array(partition, dtype=object), allow_pickle=True)
         all_partitions.append(partition)
 
     return all_partitions
