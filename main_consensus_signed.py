@@ -9,7 +9,7 @@ from consensus_signed import (
 # Paths y parámetros
 R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
 COMMUNITIES_FOLDER = "communities"
-OUTPUT_FOLDER = "output"
+OUTPUT_FOLDER = "output_consensus_signed"
 GAMMA = 0.8
 ALPHA = -1.0
 
@@ -30,7 +30,8 @@ def main():
         R_all=R_all,
         communities=communities,
         gamma=GAMMA,
-        alpha=ALPHA
+        alpha=ALPHA,
+        verbose=True
     )
 
     print("\n💾 Guardando resultados...")

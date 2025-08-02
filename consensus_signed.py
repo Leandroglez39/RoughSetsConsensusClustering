@@ -4,6 +4,7 @@ import networkx as nx
 from typing import List, Set, Tuple
 import os
 import pickle
+import matplotlib.pyplot as plt
 
 
 def similarity_between_subgraphs_from_R(
@@ -34,10 +35,19 @@ def rough_clustering_signed(
     R_all: np.ndarray,
     communities: List[List[List[int]]],
     gamma: float = 0.8,
-    alpha: float = -1.0
+    alpha: float = -1.0,
+    verbose: bool = True
 ) -> Tuple[List[Set[int]], List[Set[int]]]:
     T, N, _ = R_all.shape
     R_mean = R_all.mean(axis=0)
+
+    plt.figure()
+    plt.hist(R_mean.flatten(), bins=100)
+    plt.title("Distribución de valores en R_mean")
+    plt.xlabel("Valor")
+    plt.ylabel("Frecuencia")
+    plt.tight_layout()
+    plt.show(block=True)
 
     match_array = build_match_array(communities, N)
     b0 = len(communities) * 0.75
@@ -57,6 +67,11 @@ def rough_clustering_signed(
     coverage_inferior = [set(sg) for sg in seeds_subgraphs[:k+1]]
     coverage_superior = [set(sg) for sg in seeds_subgraphs[:k+1]]
 
+    if verbose:
+        print(f"Total grupos semilla (k+1): {k+1}")
+        print(f"Grupos residuales: {len(seeds_subgraphs) - (k+1)}")
+        print(f"Gamma = {gamma}, Alpha = {alpha}\n")
+
     for j in range(k+1, len(seeds_subgraphs)):
         group_j = seeds_subgraphs[j]
 
@@ -73,6 +88,7 @@ def rough_clustering_signed(
 
         max_match = max(sim_match) if max(sim_match) > 0 else 1.0
         max_signed = max(sim_signed) if max(sim_signed) > 0 else 1.0
+
         sim_match_norm = [s / max_match for s in sim_match]
         sim_signed_norm = [s / max_signed for s in sim_signed]
 
@@ -80,6 +96,16 @@ def rough_clustering_signed(
         max_index = sim_total.index(max(sim_total))
 
         T = [i for i in range(k+1) if i != max_index and sim_total[i] >= gamma]
+
+        if verbose:
+            print(f"Grupo residual {j - (k+1)}:")
+            print(f"  - Size: {len(group_j)}")
+            print(f"  - sim_match_norm:  {np.round(sim_match_norm, 3)}")
+            print(f"  - sim_signed_norm: {np.round(sim_signed_norm, 3)}")
+            print(f"  - sim_total:       {np.round(sim_total, 3)}")
+            print(f"  - max_index:       {max_index}")
+            print(f"  - Asignado a T:    {T}\n")
+
 
         if T:
             for i in T:
@@ -149,6 +175,9 @@ def validate_and_fix_community_folder(folder_path: str, fixed_suffix: str = "_fi
     for fname in sorted(os.listdir(folder_path)):
         if not fname.endswith(".npy"):
             continue
+        # Evitar procesar archivos ya corregidos
+        if fname.endswith(f"{fixed_suffix}.npy"):
+            continue
         fpath = os.path.join(folder_path, fname)
         data = np.load(fpath, allow_pickle=True)
 
@@ -170,11 +199,14 @@ def validate_and_fix_community_folder(folder_path: str, fixed_suffix: str = "_fi
         else:
             raise ValueError(f"[✘] Estructura inválida en {fname}")
 
-        # Guardar versión corregida si aplica
+        # Guardar versión corregida, sobrescribiendo si existe
         base = fname.replace(".npy", "")
-        out_name = f"{base}{fixed_suffix}.npy"
+        # Evitar agregar múltiples sufijos "_fixed"
+        if base.endswith(fixed_suffix):
+            out_name = f"{base}.npy"
+        else:
+            out_name = f"{base}{fixed_suffix}.npy"
         out_path = os.path.join(folder_path, out_name)
-        # Guardar siempre, sobrescribiendo si existe
         np.save(out_path, np.array(partition, dtype=object), allow_pickle=True)
         all_partitions.append(partition)
 
