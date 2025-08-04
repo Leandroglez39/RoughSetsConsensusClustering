@@ -10,8 +10,8 @@ from consensus_signed import (
 R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
 COMMUNITIES_FOLDER = "communities"
 OUTPUT_FOLDER = "output_consensus_signed"
-GAMMA = 0.8
-ALPHA = -1.0
+GAMMA = 0.5
+ALPHA = -0.25
 
 def main():
     print("🧠 Cargando matrices R...")
