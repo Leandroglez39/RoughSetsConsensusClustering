@@ -5,8 +5,11 @@ from consensus_signed import (
     rough_clustering_signed,
     save_overlapping_to_txt,
     save_result,
-    validate_and_fix_community_folder
+    validate_and_fix_community_folder,
+    
 )
+
+from consensus_visualization import plot_consensus_graph
 
 # Paths y parámetros
 R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
@@ -35,6 +38,8 @@ def main():
         alpha=ALPHA,
         verbose=True
     )
+
+    plot_consensus_graph(coverage_inf, coverage_sup, title="Consenso de comunidades firmadas", output_path=os.path.join(OUTPUT_FOLDER, "consenso_visual.png"))
 
     print("\n💾 Guardando resultados...")
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
