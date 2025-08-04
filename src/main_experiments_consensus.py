@@ -9,6 +9,7 @@ from consensus_signed import (
     save_overlapping_to_txt,
     save_result
 )
+from consensus_visualization import plot_consensus_graph
 
 # === CONFIGURACIÓN GENERAL ===
 R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
@@ -48,6 +49,8 @@ def main():
                 alpha=alpha,
                 verbose=True
             )
+
+            plot_consensus_graph(coverage_inf, coverage_sup, title=f"Consenso firmado (γ={gamma}, α={alpha})", output_path=os.path.join(out_folder, "consenso_visual.png"))
 
             # Nodos solapados
             overlapping = find_overlapping_nodes(coverage_inf, coverage_sup)
