@@ -1,7 +1,9 @@
 import os
 import numpy as np
 from consensus_signed import (
+    find_overlapping_nodes,
     rough_clustering_signed,
+    save_overlapping_to_txt,
     save_result,
     validate_and_fix_community_folder
 )
@@ -36,6 +38,9 @@ def main():
 
     print("\n💾 Guardando resultados...")
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    overlapping = find_overlapping_nodes(coverage_inf, coverage_sup)
+    save_overlapping_to_txt(overlapping, os.path.join(OUTPUT_FOLDER, "nodos_superpuestos.txt"))
+       
     save_result(OUTPUT_FOLDER, "consensus_inferior.pkl", coverage_inf)
     save_result(OUTPUT_FOLDER, "consensus_superior.pkl", coverage_sup)
 
