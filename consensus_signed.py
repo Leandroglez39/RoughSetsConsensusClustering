@@ -6,6 +6,8 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 
+from sklearn.preprocessing import minmax_scale
+
 
 def similarity_between_subgraphs_from_R(
     R: np.ndarray,
@@ -27,15 +29,16 @@ def build_match_array(communities: List[List[List[int]]], N: int) -> np.ndarray:
         for community in partition:
             for i in community:
                 for j in community:
-                    match_array[i, j] += 1
+                    if i != j:
+                        match_array[i, j] += 1
     return match_array
 
 
 def rough_clustering_signed(
     R_all: np.ndarray,
     communities: List[List[List[int]]],
-    gamma: float = 0.8,
-    alpha: float = -1.0,
+    gamma: float = 0.5,
+    alpha: float = -0.25,
     verbose: bool = True
 ) -> Tuple[List[Set[int]], List[Set[int]]]:
     T, N, _ = R_all.shape
@@ -47,7 +50,7 @@ def rough_clustering_signed(
     G_B0 = nx.Graph()
     G_B0.add_nodes_from(range(N))
     i_idx, j_idx = np.where(match_array >= b0)
-    G_B0.add_edges_from([(i, j) for i, j in zip(i_idx, j_idx)])
+    G_B0.add_edges_from([(i, j) for i, j in zip(i_idx, j_idx) if i != j])
 
     components = list(nx.connected_components(G_B0))
     seeds_subgraphs = [set(component) for component in components]
@@ -78,11 +81,15 @@ def rough_clustering_signed(
             for g in range(k+1)
         ]
 
-        max_match = max(sim_match) if max(sim_match) > 0 else 1.0
-        max_signed = max(sim_signed) if max(sim_signed) > 0 else 1.0
+        # max_match = max(sim_match) if max(sim_match) > 0 else 1.0
+        # max_signed = max(sim_signed) if max(sim_signed) > 0 else 1.0
 
-        sim_match_norm = [s / max_match for s in sim_match]
-        sim_signed_norm = [s / max_signed for s in sim_signed]
+        # sim_match_norm = [s / max_match for s in sim_match]
+        # sim_signed_norm = [s / max_signed for s in sim_signed]
+
+        sim_match_norm = minmax_scale(sim_match)
+        sim_signed_norm = minmax_scale(sim_signed)
+
 
         sim_total = [(sim_match_norm[i] + sim_signed_norm[i]) / 2 for i in range(k+1)]
         max_index = sim_total.index(max(sim_total))
