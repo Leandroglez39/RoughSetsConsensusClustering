@@ -39,7 +39,7 @@ def main():
         verbose=True
     )
 
-    plot_consensus_graph(coverage_inf, coverage_sup, title="Consenso de comunidades firmadas", output_path=os.path.join(OUTPUT_FOLDER, "consenso_visual.png"))
+    plot_consensus_graph(coverage_inf, coverage_sup, title=f"Consenso firmado (γ={GAMMA}, α={ALPHA})", output_path=os.path.join(OUTPUT_FOLDER, "consenso_visual.png"))
 
     print("\n💾 Guardando resultados...")
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
