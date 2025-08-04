@@ -1,16 +1,29 @@
+# Python environments
 venv/
 venvlinux/
-.devcontainer/
 envCDLib/
-dataset/
-output/
-communnities/
-envNX
+envNX/
+
+# IDE and development tools
+.devcontainer/
 .vscode/
+.pytest_cache/
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 src/__pycache__/
-output/flycircuit.gexf
+
+# Project data and output directories
 dataset/
+dataConnectome/
 output/
+communities/
+output_consensus_signed/
+
+# Data and result files
 *.fly
 *.csv
 *.gexf
@@ -25,9 +38,7 @@ output/
 *.txt
 *.npy
 *.pkl
-.pytest_cache/
-__pycache__/
-.pyc
-output/edgesMeasure.csv
+
+# Specific files
 testing.py
 
