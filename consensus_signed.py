@@ -210,3 +210,42 @@ def validate_and_fix_community_folder(folder_path: str, fixed_suffix: str = "_fi
         all_partitions.append(partition)
 
     return all_partitions
+
+from typing import List, Set, Dict
+
+def find_overlapping_nodes(
+    coverage_inferior: List[Set[int]],
+    coverage_superior: List[Set[int]]
+) -> Dict[int, List[int]]:
+    """
+    Encuentra los nodos que aparecen en 2 o más comunidades (solapamiento),
+    considerando coverage_inferior y coverage_superior.
+
+    Devuelve: {nodo: [índices de comunidades]}
+    """
+    node_to_communities: Dict[int, List[int]] = {}
+
+    for idx, (inf_set, sup_set) in enumerate(zip(coverage_inferior, coverage_superior)):
+        combined = inf_set.union(sup_set)
+        for node in combined:
+            node_to_communities.setdefault(node, []).append(idx)
+
+    overlapping = {node: comms for node, comms in node_to_communities.items() if len(comms) > 1}
+    return overlapping
+
+def save_overlapping_to_txt(overlapping: Dict[int, List[int]], output_path: str):
+    """
+    Guarda los nodos solapados en un archivo .txt.
+
+    Formato por línea:
+    Nodo 15: comunidades [0, 2, 3]
+    """
+    with open(output_path, "w") as f:
+        f.write("NODOS SOLAPADOS EN COMUNIDADES\n")
+        f.write("====================================\n")
+        for node, comms in sorted(overlapping.items()):
+            line = f"Nodo {node}: comunidades {comms}\n"
+            f.write(line)
+    print(f"[✔] Nodos solapados guardados en {output_path}")
+
+
