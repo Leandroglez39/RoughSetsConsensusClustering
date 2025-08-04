@@ -38,9 +38,30 @@ def main():
 
     print("\n💾 Guardando resultados...")
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+    # Encontrar nodos solapados (en la diferencia entre superior e inferior)
     overlapping = find_overlapping_nodes(coverage_inf, coverage_sup)
     save_overlapping_to_txt(overlapping, os.path.join(OUTPUT_FOLDER, "nodos_superpuestos.txt"))
-       
+
+    # Preparar consenso como diccionario: comunidad -> {'core': set, 'overlap': set}
+    consensus_dict = {}
+    for idx, (inf, sup) in enumerate(zip(coverage_inf, coverage_sup)):
+        core = set(inf)
+        overlap = set(sup) - set(inf)
+        consensus_dict[f"comunidad_{idx}"] = {
+            "core": sorted(core),
+            "overlap": sorted(overlap)
+        }
+
+    # Guardar consenso en txt legible
+    consensus_txt_path = os.path.join(OUTPUT_FOLDER, "consenso_comunidades.txt")
+    with open(consensus_txt_path, "w") as f:
+        for label, parts in consensus_dict.items():
+            f.write(f"{label}:\n")
+            f.write(f"  Núcleo: {parts['core']}\n")
+            f.write(f"  Solapados: {parts['overlap']}\n\n")
+
+    # Guardar cubrimientos originales para uso posterior
     save_result(OUTPUT_FOLDER, "consensus_inferior.pkl", coverage_inf)
     save_result(OUTPUT_FOLDER, "consensus_superior.pkl", coverage_sup)
 
