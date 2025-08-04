@@ -41,14 +41,6 @@ def rough_clustering_signed(
     T, N, _ = R_all.shape
     R_mean = R_all.mean(axis=0)
 
-    plt.figure()
-    plt.hist(R_mean.flatten(), bins=100)
-    plt.title("Distribución de valores en R_mean")
-    plt.xlabel("Valor")
-    plt.ylabel("Frecuencia")
-    plt.tight_layout()
-    plt.show(block=True)
-
     match_array = build_match_array(communities, N)
     b0 = len(communities) * 0.75
 
