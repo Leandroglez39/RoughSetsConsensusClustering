@@ -9,7 +9,7 @@ from consensus_signed import (
     save_overlapping_to_txt,
     save_result
 )
-from consensus_visualization import plot_consensus_graph
+from consensus_visualization import plot_consensus_graph, export_consensus_to_gephi_gexf
 
 # === CONFIGURACIÓN GENERAL ===
 R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
@@ -51,6 +51,7 @@ def main():
             )
 
             plot_consensus_graph(coverage_inf, coverage_sup, title=f"Consenso firmado (γ={gamma}, α={alpha})", output_path=os.path.join(out_folder, "consenso_visual.png"))
+            export_consensus_to_gephi_gexf(coverage_inf, coverage_sup, output_path=os.path.join(out_folder, "consenso.gexf"))
 
             # Nodos solapados
             overlapping = find_overlapping_nodes(coverage_inf, coverage_sup)
