@@ -2,6 +2,10 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from typing import List, Set, Optional
 
+import networkx as nx
+from typing import List, Set
+import os
+
 def plot_consensus_graph(
     coverage_inferior: List[Set[int]],
     coverage_superior: List[Set[int]],
@@ -80,3 +84,54 @@ def plot_consensus_graph(
         print(f"[✔] Visualización guardada en {output_path}")
     else:
         plt.show()
+
+
+
+
+
+def export_consensus_to_gephi_gexf(
+    coverage_inf: List[Set[int]],
+    coverage_sup: List[Set[int]],
+    output_path: str
+):
+    """
+    Crea un grafo con nodos anotados por su comunidad:
+    - 'comunidad_core': comunidad núcleo (si aplica)
+    - 'comunidades_superior': lista de comunidades donde está (solapamiento)
+
+    Se crean aristas entre todos los nodos de cada comunidad superior para dar cohesión.
+    """
+
+    G = nx.Graph()
+    node_info = {}
+
+    for comm_id, (core, sup) in enumerate(zip(coverage_inf, coverage_sup)):
+        for node in sup:
+            if node not in node_info:
+                node_info[node] = {
+                    "comunidad_core": -1,
+                    "comunidades_superior": set()
+                }
+
+            node_info[node]["comunidades_superior"].add(comm_id)
+
+            if node in core:
+                node_info[node]["comunidad_core"] = comm_id
+
+    for node, attrs in node_info.items():
+        G.add_node(
+            node,
+            comunidad_core=attrs["comunidad_core"],
+            comunidades_superior=",".join(map(str, sorted(attrs["comunidades_superior"])))
+        )
+
+    # Crear aristas dentro de cada comunidad superior (clique completa)
+    for sup in coverage_sup:
+        sup = list(sup)
+        for i in range(len(sup)):
+            for j in range(i + 1, len(sup)):
+                G.add_edge(sup[i], sup[j])
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    nx.write_gexf(G, output_path)
+    print(f"[✔] Grafo exportado a Gephi (.gexf) en: {output_path}")
