@@ -9,7 +9,7 @@ from consensus_signed import (
     
 )
 
-from consensus_visualization import plot_consensus_graph
+from consensus_visualization import export_consensus_to_gephi_gexf, plot_consensus_graph
 
 # Paths y parámetros
 R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
@@ -40,6 +40,7 @@ def main():
     )
 
     plot_consensus_graph(coverage_inf, coverage_sup, title=f"Consenso firmado (γ={GAMMA}, α={ALPHA})", output_path=os.path.join(OUTPUT_FOLDER, "consenso_visual.png"))
+    export_consensus_to_gephi_gexf(coverage_inf, coverage_sup, output_path=os.path.join(OUTPUT_FOLDER, "consenso.gexf"))
 
     print("\n💾 Guardando resultados...")
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
