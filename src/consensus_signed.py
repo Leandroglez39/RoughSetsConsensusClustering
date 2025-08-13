@@ -19,7 +19,12 @@ def similarity_between_subgraphs_from_R(
     for i in A:
         for j in B:
             val = R[i, j]
-            total += val if val >= 0 else alpha * abs(val)
+            if val >= 0:
+                total += val
+            else:
+                val = alpha * abs(val)
+                total += val
+                # total += val if val >= 0 else alpha * abs(val)
     return total / (len(A) * len(B))
 
 
