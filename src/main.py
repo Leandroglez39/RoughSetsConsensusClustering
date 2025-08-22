@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import pickle
 import multiprocessing
@@ -6,6 +7,8 @@ from multiprocessing import Array
 import sys
 import concurrent.futures
 from timeit import default_timer as timer
+import networkx as nx
+import os
 
 
 def temp():
@@ -175,97 +178,145 @@ def match_count_parallel_return(tuple):
     pos = pos + tuple[1] - tuple[0] 
     return pos
 
+def main_test_graph_reduced():
+    reduced_graph_path = "dataset/Software-Mysql-main-sA/"
+    # List all .txt files in the reduced_graph_path directory
+    gml_files = [f for f in os.listdir(reduced_graph_path) if f.endswith('.gml')]
+
+    graphs = []
+    for file in gml_files:
+        file_path = os.path.join(reduced_graph_path, file)
+        G = nx.read_gml(file_path)
+        # Remove '.gml' and 'reduced__CoCoNUT-ANY_' from the filename
+        graph_name = file.replace('reduced__CoCoNUT-ANY_', '').replace('.gml', '')
+        G.graph['name'] = graph_name
+        graphs.append(G)
+
+    # Ordenar los grafos por el valor numérico después de 'main-sA_'
+    def extract_numeric_key(G):
+        # Extrae el nombre del grafo
+        name = G.graph.get('name', '')
+        # Busca el número después de 'main-sA_'
+        try:
+            num_str = name.split('main-sA_')[1]
+            # Si hay más sufijos, solo toma el número inicial con decimales
+            num_part = num_str.split('_')[0]
+            num = float(num_part)
+            return num
+        except (IndexError, ValueError):
+            return float('inf')  # Si no encuentra, lo manda al final
+
+    graphs.sort(key=extract_numeric_key)
+
+    # Now you have a list of NetworkX graphs in 'graphs'
+    for g in graphs:
+        # resolution = 0.01
+        # n = 1
+        # communities = lovain_concurrent(g, resolution=resolution, n=n)
+        # print(f"Grafo: {g.graph['name']}")
+        # for idx, comm in enumerate(communities):
+        #     print(f"  Ejecución {idx+1}: {len(comm)} comunidades")
+        #     print("    Cardinalidades:", [len(c) for c in comm])
+
+        for res in [0.01, 0.001, 0.0001]:
+            comms = lovain_concurrent(g, resolution=res, n=1)
+            for _, comm in enumerate(comms):
+                print(f"Grafo: {g.graph['name']}")
+                print(f"resolution={res}: {len(comm)} comunidades")
+
 if __name__ == '__main__':
+
+    main_test_graph_reduced()
     
-    n = 11000
-    #params = [(i,j) for i in range(n) for j in range( i + 1, n)]
+    # n = 11000
+    # #params = [(i,j) for i in range(n) for j in range( i + 1, n)]
 
-    print('Params ready')
-    
-
-    import networkx as nx
-
-    # Create a graph
-    G = nx.Graph()
-    G.add_edges_from([(1, 2), (1, 3), (2, 3), (2, 4), (3, 4)])
-
-    # Create two subgraphs
-    subgraph1 = G.subgraph([1, 2, 3])
-    subgraph2 = G.subgraph([2, 3, 4])
-
-    print(subgraph1.edges)
-    print(subgraph2.edges)
-
-    # Calculate the number of edges between the subgraphs
-    
-    a = nx.algorithms.community.quality.inter_community_edges(G, subgraph2.nodes)
-    # Print the result
-    print("Number of edges between subgraphs:", a)
-
-
-    # concurrent
-    # comment out to only run sequential
-    start = timer()
-    result = []
-
-    # with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-    #     result = pool.map(match_count_parallel, params)
-    
-    # for i in params:
-    #     match_count_parallel(i)
-    
-    # with concurrent.futures.ProcessPoolExecutor(max_workers= 20) as executor:
-    #     futures = [executor.submit(match_count_parallel_return, i) for i in params]
-
-    #     for i, future in enumerate(concurrent.futures.as_completed(futures)):
-    #         if future.result():
-    #             result.append(future.result())
-    
+    # print('Params ready')
     
 
 
-    #print('Result 2:', result)
-    print('Took: %.2f seconds.' % (timer() - start))
 
-    print(len(result))
+    # # Create a graph
+    # G = nx.Graph()
+    # G.add_edges_from([(1, 2), (1, 3), (2, 3), (2, 4), (3, 4)])
+
+    # # Create two subgraphs
+    # subgraph1 = G.subgraph([1, 2, 3])
+    # subgraph2 = G.subgraph([2, 3, 4])
+
+    # print(subgraph1.edges)
+    # print(subgraph2.edges)
+
+    # # Calculate the number of edges between the subgraphs
+    
+    # a = nx.algorithms.community.quality.inter_community_edges(G, subgraph2.nodes)
+    # # Print the result
+    # print("Number of edges between subgraphs:", a)
+
+
+    # # concurrent
+    # # comment out to only run sequential
+    # start = timer()
+    # result = []
+
+    # # with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+    # #     result = pool.map(match_count_parallel, params)
+    
+    # # for i in params:
+    # #     match_count_parallel(i)
+    
+    # # with concurrent.futures.ProcessPoolExecutor(max_workers= 20) as executor:
+    # #     futures = [executor.submit(match_count_parallel_return, i) for i in params]
+
+    # #     for i, future in enumerate(concurrent.futures.as_completed(futures)):
+    # #         if future.result():
+    # #             result.append(future.result())
+    
+    
+
+
+    # #print('Result 2:', result)
+    # print('Took: %.2f seconds.' % (timer() - start))
+
+    # print(len(result))
    
 
-    print('Done')
+    # print('Done')
 
-    print(data_a)
+    # print(data_a)
 
-    '''Region Concurrent Communities Algorithms'''
+    # '''Region Concurrent Communities Algorithms'''
     
-    #communities = lovain_concurrent(G)
+    # #communities = lovain_concurrent(G)
     
-    #communities = asyn_lpa_concurrent(G) 
+    # #communities = asyn_lpa_concurrent(G) 
 
-    #communities = greedy_modularity_concurrent(G)
+    # #communities = greedy_modularity_concurrent(G)
 
-    #print(communities)
+    # #print(communities)
 
     
 
-    #communities = infomap_concurrent(G)
+    # #communities = infomap_concurrent(G)
 
-    #print(communities[0].communities )
+    # #print(communities[0].communities )
 
-    ''' End Region Concurrent Communities Algorithms '''
+    # ''' End Region Concurrent Communities Algorithms '''
 
-    # from infomap import Infomap 
+    # # from infomap import Infomap 
 
-    # from cdlib import algorithms
+    # # from cdlib import algorithms
 
-    # nx_communities = algorithms.infomap(G)
+    # # nx_communities = algorithms.infomap(G)
 
-    # print(nx_communities.communities)
+    # # print(nx_communities.communities)
 
-    # numbers = [5000000 + x for x in range(20)]
+    # # numbers = [5000000 + x for x in range(20)]
 
-    # start_time = time.time()
-    # find_sums(numbers)
-    # duration = time.time() - start_time
-    # print(f"Duration {duration} seconds")
+    # # start_time = time.time()
+    # # find_sums(numbers)
+    # # duration = time.time() - start_time
+    # # print(f"Duration {duration} seconds")
 
     
     
