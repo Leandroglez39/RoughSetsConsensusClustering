@@ -98,7 +98,7 @@ def rough_clustering_signed(
             for g in range(k+1)
         ]
 
-        print(sim_signed_rmean)
+        # print(sim_signed_rmean)
 
 
         # utilizando todas la matrices de correlación
@@ -107,7 +107,7 @@ def rough_clustering_signed(
             for g in range(k+1)
         ]
 
-        print(sim_signed_rall)
+        # print(sim_signed_rall)
 
         # max_match = max(sim_match) if max(sim_match) > 0 else 1.0
         # max_signed = max(sim_signed) if max(sim_signed) > 0 else 1.0
