@@ -13,7 +13,7 @@ from consensus_visualization import plot_consensus_graph, export_consensus_to_ge
 
 # === CONFIGURACIÓN GENERAL ===
 R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
-COMMUNITIES_FOLDER = "communities"
+COMMUNITIES_FOLDER = "communities/granularity_100/"
 OUTPUT_BASE = "output_experiments_signed"
 
 # === PARÁMETROS A PROBAR ===
