@@ -2,7 +2,7 @@
 
 import os
 import numpy as np
-from src.consensus_signed import (
+from consensus_signed import (
     validate_and_fix_community_folder,
     rough_clustering_signed,
     find_overlapping_nodes,
