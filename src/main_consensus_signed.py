@@ -13,7 +13,7 @@ from consensus_visualization import export_consensus_to_gephi_gexf, plot_consens
 
 # Paths y parámetros
 R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
-COMMUNITIES_FOLDER = "communities"
+COMMUNITIES_FOLDER = "communities/granularity_100/"
 OUTPUT_FOLDER = "output_consensus_signed"
 GAMMA = 0.5
 ALPHA = -0.25
