@@ -12,8 +12,8 @@ from consensus_signed import (
 from consensus_visualization import plot_consensus_graph, export_consensus_to_gephi_gexf
 
 # === CONFIGURACIÓN GENERAL ===
-R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
-COMMUNITIES_FOLDER = "communities/granularity_100/"
+R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_300_resting_state.npy"
+COMMUNITIES_FOLDER = "communities/granularity_300/"
 OUTPUT_BASE = "output_experiments_signed"
 
 # === PARÁMETROS A PROBAR ===
