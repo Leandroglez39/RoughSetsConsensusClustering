@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from src.consensus_signed import (
+from consensus_signed import (
     find_overlapping_nodes,
     rough_clustering_signed,
     save_overlapping_to_txt,
