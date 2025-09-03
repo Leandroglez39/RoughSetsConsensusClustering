@@ -147,7 +147,6 @@ def load_communities_from_npy(folder_path: str) -> List[List[List[int]]]:
     return all_partitions
 
 
-
 def save_result(output_path: str, name: str, obj) -> None:
     with open(os.path.join(output_path, name), "wb") as f:
         pickle.dump(obj, f)
@@ -159,6 +158,7 @@ def is_valid_partition(data) -> bool:
     """
     return isinstance(data, list) and all(isinstance(c, list) for c in data)
 
+
 def convert_labels_to_partition(labels: np.ndarray) -> List[List[int]]:
     """
     Convierte un vector de etiquetas en partición: List[List[int]]
@@ -167,6 +167,7 @@ def convert_labels_to_partition(labels: np.ndarray) -> List[List[int]]:
     for node, label in enumerate(labels):
         comm_dict[int(label)].append(node)
     return list(comm_dict.values())
+
 
 def validate_and_fix_community_folder(folder_path: str, fixed_suffix: str = "_fixed") -> List[List[List[int]]]:
     """
@@ -216,7 +217,9 @@ def validate_and_fix_community_folder(folder_path: str, fixed_suffix: str = "_fi
 
     return all_partitions
 
+
 from typing import List, Set, Dict
+
 
 def find_overlapping_nodes(
     coverage_inferior: List[Set[int]],
@@ -237,6 +240,7 @@ def find_overlapping_nodes(
 
     overlapping = {node: comms for node, comms in node_to_communities.items() if len(comms) > 1}
     return overlapping
+
 
 def save_overlapping_to_txt(overlapping: Dict[int, List[int]], output_path: str):
     """
