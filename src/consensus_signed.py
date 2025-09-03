@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import minmax_scale
 
-
+# utiliza R_mean
 def similarity_between_subgraphs_from_R(
     R: np.ndarray,
     A: Set[int],
@@ -27,6 +27,17 @@ def similarity_between_subgraphs_from_R(
                 # total += val if val >= 0 else alpha * abs(val)
     return total / (len(A) * len(B))
 
+# utiliza todas las matrices correlacion
+def similarity_between_subgraphs_from_R_all(
+        R: np.ndarray,
+        A: Set[int],
+        B: Set[int],
+        alpha: float = -1.0
+) -> float:
+    total = 0.0
+    for t in range(R.shape[0]):
+        total += similarity_between_subgraphs_from_R(R[t], A, B, alpha)
+    return total / R.shape[0]
 
 def build_match_array(communities: List[List[List[int]]], N: int) -> np.ndarray:
     match_array = np.zeros((N, N), dtype=int)
@@ -81,10 +92,22 @@ def rough_clustering_signed(
             for g in range(k+1)
         ]
 
-        sim_signed = [
+        # utilizando R_mean
+        sim_signed_rmean = [
             similarity_between_subgraphs_from_R(R_mean, group_j, coverage_inferior[g], alpha)
             for g in range(k+1)
         ]
+
+        print(sim_signed_rmean)
+
+
+        # utilizando todas la matrices de correlación
+        sim_signed_rall = [
+            similarity_between_subgraphs_from_R_all(R_all, group_j, coverage_inferior[g], alpha)
+            for g in range(k+1)
+        ]
+
+        print(sim_signed_rall)
 
         # max_match = max(sim_match) if max(sim_match) > 0 else 1.0
         # max_signed = max(sim_signed) if max(sim_signed) > 0 else 1.0
@@ -93,7 +116,7 @@ def rough_clustering_signed(
         # sim_signed_norm = [s / max_signed for s in sim_signed]
 
         sim_match_norm = minmax_scale(sim_match)
-        sim_signed_norm = minmax_scale(sim_signed)
+        sim_signed_norm = minmax_scale(sim_signed_rall)
 
 
         sim_total = [(sim_match_norm[i] + sim_signed_norm[i]) / 2 for i in range(k+1)]
