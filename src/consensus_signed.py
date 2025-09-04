@@ -75,27 +75,27 @@ def rough_clustering_signed(
     k = int(np.percentile([len(c) for c in communities], 91))
     k = min(k, len(seeds_subgraphs) - 1)
 
-    coverage_inferior = [set(sg) for sg in seeds_subgraphs[:k+1]]
-    coverage_superior = [set(sg) for sg in seeds_subgraphs[:k+1]]
+    coverage_inferior = [set(sg) for sg in seeds_subgraphs[:k]]
+    coverage_superior = [set(sg) for sg in seeds_subgraphs[:k]]
 
     if verbose:
-        print(f"Total grupos semilla (k+1): {k+1}")
-        print(f"Grupos residuales: {len(seeds_subgraphs) - (k+1)}")
+        print(f"Total grupos semilla (k+1): {k}")
+        print(f"Grupos residuales: {len(seeds_subgraphs) - (k)}")
         print(f"Gamma = {gamma}, Alpha = {alpha}\n")
 
-    for j in range(k+1, len(seeds_subgraphs)):
+    for j in range(k, len(seeds_subgraphs)):
         group_j = seeds_subgraphs[j]
 
         sim_match = [
             np.sum([match_array[i, j] for i in group_j for j in coverage_inferior[g]])
             / (len(group_j) * len(coverage_inferior[g]))
-            for g in range(k+1)
+            for g in range(k)
         ]
 
         # utilizando R_mean
         sim_signed_rmean = [
             similarity_between_subgraphs_from_R(R_mean, group_j, coverage_inferior[g], alpha)
-            for g in range(k+1)
+            for g in range(k)
         ]
 
         # print(sim_signed_rmean)
@@ -104,28 +104,20 @@ def rough_clustering_signed(
         # utilizando todas la matrices de correlación
         sim_signed_rall = [
             similarity_between_subgraphs_from_R_all(R_all, group_j, coverage_inferior[g], alpha)
-            for g in range(k+1)
+            for g in range(k)
         ]
-
-        # print(sim_signed_rall)
-
-        # max_match = max(sim_match) if max(sim_match) > 0 else 1.0
-        # max_signed = max(sim_signed) if max(sim_signed) > 0 else 1.0
-
-        # sim_match_norm = [s / max_match for s in sim_match]
-        # sim_signed_norm = [s / max_signed for s in sim_signed]
 
         sim_match_norm = minmax_scale(sim_match)
         sim_signed_norm = minmax_scale(sim_signed_rall)
 
 
-        sim_total = [(sim_match_norm[i] + sim_signed_norm[i]) / 2 for i in range(k+1)]
+        sim_total = [(sim_match_norm[i] + sim_signed_norm[i]) / 2 for i in range(k)]
         max_index = sim_total.index(max(sim_total))
 
-        T = [i for i in range(k+1) if i != max_index and sim_total[i] >= gamma]
+        T = [i for i in range(k) if i != max_index and sim_total[i] >= gamma]
 
         if verbose:
-            print(f"Grupo residual {j - (k+1)}:")
+            print(f"Grupo residual {j - (k)}:")
             print(f"  - Size: {len(group_j)}")
             print(f"  - sim_match_norm:  {np.round(sim_match_norm, 3)}")
             print(f"  - sim_signed_norm: {np.round(sim_signed_norm, 3)}")
