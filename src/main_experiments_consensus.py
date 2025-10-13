@@ -3,17 +3,20 @@
 import os
 import numpy as np
 from consensus_signed import (
+    build_match_array,
     validate_and_fix_community_folder,
     rough_clustering_signed,
     find_overlapping_nodes,
     save_overlapping_to_txt,
     save_result
 )
-from consensus_visualization import plot_consensus_graph, export_consensus_to_gephi_gexf
+from consensus_visualization import plot_consensus_graph, export_consensus_to_gephi_gexf, plot_consensus_matrix_by_communities, plot_consensus_quality_metrics
+import pandas as pd
+import re
 
 # === CONFIGURACIÓN GENERAL ===
-R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_400_resting_state.npy"
-COMMUNITIES_FOLDER = "communities/granularity_400/"
+R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
+COMMUNITIES_FOLDER = "communities/granularity_100/"
 OUTPUT_BASE = "output_experiments_signed"
 
 # === PARÁMETROS A PROBAR ===
@@ -49,6 +52,28 @@ def main():
                 alpha=alpha,
                 verbose=True
             )
+
+            # ============= AQUÍ ENCAJAN LAS NUEVAS VISUALIZACIONES =============
+            print("📊 Generando visualizaciones de matriz de consenso...")
+            
+            # Construir matriz de consenso
+            match_array = build_match_array(communities, N)
+            
+            # Matriz ordenada por comunidades obtenidas
+            plot_consensus_matrix_by_communities(
+                match_array, coverage_inf, coverage_sup, 
+                gamma, alpha, 
+                output_path=os.path.join(out_folder, "consensus_matrix_ordered.png")
+            )
+            
+            # Métricas de calidad del consenso
+            plot_consensus_quality_metrics(
+                match_array, coverage_inf, coverage_sup,
+                gamma, alpha,
+                output_path=os.path.join(out_folder, "consensus_quality_metrics.png")
+            )
+            # ===================================================================
+
 
             plot_consensus_graph(coverage_inf, coverage_sup, title=f"Consenso firmado (γ={gamma}, α={alpha})", output_path=os.path.join(out_folder, "consenso_visual.png"))
             export_consensus_to_gephi_gexf(coverage_inf, coverage_sup, output_path=os.path.join(out_folder, "consenso.gexf"))
