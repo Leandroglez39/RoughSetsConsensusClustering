@@ -7,6 +7,7 @@ import pickle
 import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import minmax_scale
+from typing import List, Set, Dict
 
 # utiliza R_mean
 def similarity_between_subgraphs_from_R(
@@ -38,6 +39,7 @@ def similarity_between_subgraphs_from_R_all(
     for t in range(R.shape[0]):
         total += similarity_between_subgraphs_from_R(R[t], A, B, alpha)
     return total / R.shape[0]
+
 
 def build_match_array(communities: List[List[List[int]]], N: int) -> np.ndarray:
     match_array = np.zeros((N, N), dtype=int)
@@ -231,9 +233,6 @@ def validate_and_fix_community_folder(folder_path: str, fixed_suffix: str = "_fi
         all_partitions.append(partition)
 
     return all_partitions
-
-
-from typing import List, Set, Dict
 
 
 def find_overlapping_nodes(
