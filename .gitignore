@@ -39,6 +39,7 @@ output_experiments_signed/
 *.txt
 *.npy
 *.pkl
+*.xlsx
 
 # Specific files
 testing.py
