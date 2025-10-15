@@ -10,7 +10,7 @@ from consensus_signed import (
     save_overlapping_to_txt,
     save_result
 )
-from consensus_visualization import plot_consensus_graph, export_consensus_to_gephi_gexf, plot_consensus_matrix_by_communities, plot_consensus_quality_metrics
+from consensus_visualization import build_fuzzy_consensus_matrix, plot_consensus_graph, export_consensus_to_gephi_gexf, plot_fuzzy_consensus_heatmap,  plot_structured_consensus_matrix
 import pandas as pd
 import re
 
@@ -20,8 +20,11 @@ COMMUNITIES_FOLDER = "communities/granularity_100/"
 OUTPUT_BASE = "output_experiments_signed"
 
 # === PARÁMETROS A PROBAR ===
-GAMMA_VALUES = [0.3, 0.5, 0.7]
-ALPHA_VALUES = [-0.1, -0.25, -0.5]
+GAMMA_VALUES = [0.3]
+ALPHA_VALUES = [-0.1]
+
+# GAMMA_VALUES = [0.3, 0.5, 0.7]
+# ALPHA_VALUES = [-0.1, -0.25, -0.5]
 
 def main():
     print("📥 Cargando matrices R...")
@@ -60,18 +63,35 @@ def main():
             match_array = build_match_array(communities, N)
             
             # Matriz ordenada por comunidades obtenidas
-            plot_consensus_matrix_by_communities(
-                match_array, coverage_inf, coverage_sup, 
-                gamma, alpha, 
-                output_path=os.path.join(out_folder, "consensus_matrix_ordered.png")
-            )
+            plot_structured_consensus_matrix(
+                match_array=match_array,
+                coverage_inf=coverage_inf,
+                coverage_sup=coverage_sup,
+                gamma=gamma,
+                alpha=alpha,
+                output_path=os.path.join(out_folder, "consensus_matrix_structured.png"))
             
-            # Métricas de calidad del consenso
-            plot_consensus_quality_metrics(
-                match_array, coverage_inf, coverage_sup,
-                gamma, alpha,
-                output_path=os.path.join(out_folder, "consensus_quality_metrics.png")
-            )
+            # Construir matriz difusa
+            W = build_fuzzy_consensus_matrix(N=match_array.shape[0],
+                                            coverage_inf=coverage_inf,
+                                            coverage_sup=coverage_sup)
+
+            # Visualizar
+            plot_fuzzy_consensus_heatmap(W,
+                                        coverage_inf=coverage_inf,
+                                        coverage_sup=coverage_sup,
+                                        gamma=gamma,
+                                        alpha=alpha,
+                                        output_path=os.path.join(out_folder, "fuzzy_consensus_heatmap.png"))
+
+            
+
+            # # Métricas de calidad del consenso
+            # plot_consensus_quality_metrics(
+            #     match_array, coverage_inf, coverage_sup,
+            #     gamma, alpha,
+            #     output_path=os.path.join(out_folder, "consensus_quality_metrics.png")
+            # )
             # ===================================================================
 
 
