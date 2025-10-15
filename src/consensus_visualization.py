@@ -134,72 +134,185 @@ def export_consensus_to_gephi_gexf(
     nx.write_gexf(G, output_path)
     print(f"[✔] Grafo exportado a Gephi (.gexf) en: {output_path}")
 
-def plot_consensus_matrix_by_communities(match_array, coverage_inf, coverage_sup, 
-                                       gamma, alpha, output_path=None):
+def plot_structured_consensus_matrix(match_array, coverage_inf, coverage_sup,
+                                     gamma, alpha, output_path=None):
     """
-    Visualiza la matriz de consenso reordenada por comunidades obtenidas
+    Visualiza la matriz de consenso estructurada por comunidades,
+    distinguiendo nodos núcleo y solapados sin duplicación.
     """
-    # Crear orden de nodos por comunidad
+
+    N = match_array.shape[0]
     node_order = []
-    community_boundaries = [0]
-    
+    node_labels = []
+    community_boundaries = []
+    already_added = set()
+
+    # Construcción de orden de nodos: primero núcleo, luego solapados únicos
     for i, (inf, sup) in enumerate(zip(coverage_inf, coverage_sup)):
-        # Primero los nodos del núcleo, luego los solapados
-        core_nodes = sorted(set(inf))
-        overlap_nodes = sorted(set(sup) - set(inf))
-        
-        node_order.extend(core_nodes)
-        node_order.extend(overlap_nodes)
+        inf = sorted(set(inf) - already_added)
+        sup_only = sorted(set(sup) - set(inf) - already_added)
+
+        node_order.extend(inf)
+        node_labels.extend([f'C{i} (núcleo)'] * len(inf))
+
+        node_order.extend(sup_only)
+        node_labels.extend([f'C{i} (solapado)'] * len(sup_only))
+
+        already_added.update(inf)
+        already_added.update(sup_only)
+
         community_boundaries.append(len(node_order))
-    
-    # Añadir nodos que no están en ninguna comunidad
-    all_consensus_nodes = set(node_order)
-    remaining_nodes = sorted(set(range(match_array.shape[0])) - all_consensus_nodes)
-    node_order.extend(remaining_nodes)
-    
+
+    # Nodos no asignados a ninguna comunidad
+    remaining = sorted(set(range(N)) - already_added)
+    node_order.extend(remaining)
+    node_labels.extend(['No asignado'] * len(remaining))
+    if remaining:
+        community_boundaries.append(len(node_order))
+
     # Reordenar matriz
     reordered_matrix = match_array[np.ix_(node_order, node_order)]
-    
-    # Crear visualización
+
+    # Plot
     fig, ax = plt.subplots(figsize=(12, 10))
-    
-    # Heatmap
     im = ax.imshow(reordered_matrix, cmap='RdYlBu_r', aspect='auto', 
                    vmin=0, vmax=np.max(match_array))
-    
-    # Líneas separadoras entre comunidades
-    for boundary in community_boundaries[1:-1]:
-        ax.axhline(y=boundary-0.5, color='white', linewidth=2)
-        ax.axvline(x=boundary-0.5, color='white', linewidth=2)
-    
-    # Etiquetas y título
-    ax.set_title(f'Matriz de Consenso por Comunidades\n(γ={gamma}, α={alpha})', 
-                fontsize=14, fontweight='bold')
+
+    # Líneas entre comunidades
+    for b in community_boundaries[:-1]:
+        ax.axhline(y=b - 0.5, color='white', linewidth=2)
+        ax.axvline(x=b - 0.5, color='white', linewidth=2)
+
+    # Etiquetas
+    ax.set_title(f'Matriz de Consenso Estructurada\n(γ={gamma}, α={alpha})', 
+                 fontsize=14, fontweight='bold')
     ax.set_xlabel('Nodos (reordenados por comunidad)', fontsize=12)
     ax.set_ylabel('Nodos (reordenados por comunidad)', fontsize=12)
-    
+
     # Colorbar
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
     cbar.set_label('Frecuencia de co-pertenencia', fontsize=12)
-    
-    # Anotaciones de comunidades
-    for i, (start, end) in enumerate(zip(community_boundaries[:-1], community_boundaries[1:])):
-        if end > start:
-            mid_point = (start + end) / 2
-            ax.text(mid_point, -0.02 * len(node_order), f'C{i}', 
-                   ha='center', va='top', transform=ax.transData, fontsize=10)
-            ax.text(-0.02 * len(node_order), mid_point, f'C{i}', 
-                   ha='right', va='center', transform=ax.transData, fontsize=10, rotation=90)
-    
+
     plt.tight_layout()
-    
+
     if output_path:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"✅ Matriz de consenso guardada: {output_path}")
-    
+
     plt.show()
-    
-    return node_order, community_boundaries
+
+    return node_order, node_labels, community_boundaries
+
+def build_fuzzy_consensus_matrix(N, coverage_inf, coverage_sup,
+                                  w_core=1.0, w_mixed=0.6, w_overlap=0.4):
+    """
+    Construye una matriz de similitud difusa basada en la pertenencia
+    de nodos a comunidades: núcleo vs solapado.
+    """
+
+    W = np.zeros((N, N))
+
+    for inf, sup in zip(coverage_inf, coverage_sup):
+        core_nodes = set(inf)
+        overlap_nodes = set(sup) - core_nodes
+
+        # Núcleo–núcleo
+        for i in core_nodes:
+            for j in core_nodes:
+                W[i, j] += w_core
+
+        # Núcleo–solapado (y viceversa)
+        for i in core_nodes:
+            for j in overlap_nodes:
+                W[i, j] += w_mixed
+                W[j, i] += w_mixed
+
+        # Solapado–solapado
+        for i in overlap_nodes:
+            for j in overlap_nodes:
+                W[i, j] += w_overlap
+
+    # Normalización opcional si un nodo aparece en varias comunidades
+    W = np.clip(W, 0, 1.0)
+
+    return W
+
+
+def plot_fuzzy_consensus_heatmap(W, coverage_inf, coverage_sup,
+                                 gamma, alpha, output_path=None):
+    """
+    Visualiza la matriz difusa de consenso, agrupando por comunidades y
+    mostrando los índices de los nodos y los límites comunitarios.
+    """
+
+    N = W.shape[0]
+    node_order = []
+    community_boundaries = [0]
+    community_labels = []
+    already_added = set()
+
+    for i, (inf, sup) in enumerate(zip(coverage_inf, coverage_sup)):
+        inf = sorted(set(inf) - already_added)
+        sup_only = sorted(set(sup) - set(inf) - already_added)
+
+        node_order.extend(inf)
+        node_order.extend(sup_only)
+
+        already_added.update(inf)
+        already_added.update(sup_only)
+
+        community_boundaries.append(len(node_order))
+        community_labels.append(f'C{i}')
+
+    remaining = sorted(set(range(N)) - already_added)
+    if remaining:
+        node_order.extend(remaining)
+        community_boundaries.append(len(node_order))
+        community_labels.append('No asignado')
+
+    reordered_W = W[np.ix_(node_order, node_order)]
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(12, 10))
+    im = ax.imshow(reordered_W, cmap='YlGnBu', vmin=0, vmax=1.0)
+
+    # Etiquetas de ejes: índices reales de los nodos
+    tick_positions = np.arange(len(node_order))
+    ax.set_xticks(tick_positions)
+    ax.set_yticks(tick_positions)
+    ax.set_xticklabels(node_order, rotation=90, fontsize=6)
+    ax.set_yticklabels(node_order, fontsize=6)
+
+    # Líneas blancas de comunidad
+    for b in community_boundaries[1:-1]:
+        ax.axhline(y=b - 0.5, color='white', linewidth=2)
+        ax.axvline(x=b - 0.5, color='white', linewidth=2)
+
+    # Etiquetas de comunidad en el margen
+    for idx, (start, end) in enumerate(zip(community_boundaries[:-1], community_boundaries[1:])):
+        if end > start:
+            mid = (start + end) // 2
+            ax.text(-3, mid, community_labels[idx], va='center', ha='right', fontsize=8, fontweight='bold', transform=ax.transData)
+            ax.text(mid, len(node_order) + 1, community_labels[idx], va='top', ha='center', fontsize=8, fontweight='bold', rotation=90, transform=ax.transData)
+
+    ax.set_title(f'Matriz Difusa de Consenso\n(γ={gamma}, α={alpha})', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Índice de nodo (reordenado)', fontsize=10)
+    ax.set_ylabel('Índice de nodo (reordenado)', fontsize=10)
+
+    cbar = plt.colorbar(im, ax=ax, shrink=0.8)
+    cbar.set_label('Nivel de pertenencia estructural', fontsize=12)
+
+    plt.tight_layout()
+
+    if output_path:
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"✅ Matriz difusa guardada: {output_path}")
+
+    plt.show()
+
+    return node_order
+
+
 
 def plot_consensus_quality_metrics(match_array, coverage_inf, coverage_sup, 
                                  gamma, alpha, output_path=None):
