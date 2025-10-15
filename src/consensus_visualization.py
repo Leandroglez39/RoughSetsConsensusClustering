@@ -7,6 +7,7 @@ import os
 import numpy as np
 import seaborn as sns
 from consensus_signed import build_match_array
+from collections import defaultdict
 
 def plot_consensus_graph(
     coverage_inferior: List[Set[int]],
@@ -203,116 +204,112 @@ def plot_structured_consensus_matrix(match_array, coverage_inf, coverage_sup,
 
     return node_order, node_labels, community_boundaries
 
-def build_fuzzy_consensus_matrix(N, coverage_inf, coverage_sup,
-                                  w_core=1.0, w_mixed=0.6, w_overlap=0.4):
+def build_fuzzy_matrix_with_repeats(match_array, coverage_inf, coverage_sup,
+                                     w_core=1.0, w_overlap_base=0.6):
     """
-    Construye una matriz de similitud difusa basada en la pertenencia
-    de nodos a comunidades: núcleo vs solapado.
-    """
-
-    W = np.zeros((N, N))
-
-    for inf, sup in zip(coverage_inf, coverage_sup):
-        core_nodes = set(inf)
-        overlap_nodes = set(sup) - core_nodes
-
-        # Núcleo–núcleo
-        for i in core_nodes:
-            for j in core_nodes:
-                W[i, j] += w_core
-
-        # Núcleo–solapado (y viceversa)
-        for i in core_nodes:
-            for j in overlap_nodes:
-                W[i, j] += w_mixed
-                W[j, i] += w_mixed
-
-        # Solapado–solapado
-        for i in overlap_nodes:
-            for j in overlap_nodes:
-                W[i, j] += w_overlap
-
-    # Normalización opcional si un nodo aparece en varias comunidades
-    W = np.clip(W, 0, 1.0)
-
-    return W
-
-
-def plot_fuzzy_consensus_heatmap(W, coverage_inf, coverage_sup,
-                                 gamma, alpha, output_path=None):
-    """
-    Visualiza la matriz difusa de consenso, agrupando por comunidades y
-    mostrando los índices de los nodos y los límites comunitarios.
+    Construye matriz fuzzy MxM permitiendo repeticiones de nodos solapados.
     """
 
-    N = W.shape[0]
-    node_order = []
+    # 1. Construir un diccionario: nodo → número de comunidades en las que aparece
+    node_to_num_comms = defaultdict(int)
+    for sup in coverage_sup:
+        for node in sup:
+            node_to_num_comms[node] += 1
+
+    # 2. Construir la secuencia extendida de nodos (con repeticiones)
+    extended_nodes = []
+    node_roles = []
     community_boundaries = [0]
     community_labels = []
-    already_added = set()
 
     for i, (inf, sup) in enumerate(zip(coverage_inf, coverage_sup)):
-        inf = sorted(set(inf) - already_added)
-        sup_only = sorted(set(sup) - set(inf) - already_added)
+        core_nodes = sorted(inf)
+        overlap_nodes = sorted(set(sup) - set(inf))
 
-        node_order.extend(inf)
-        node_order.extend(sup_only)
+        extended_nodes.extend(core_nodes)
+        node_roles.extend(['core'] * len(core_nodes))
 
-        already_added.update(inf)
-        already_added.update(sup_only)
+        extended_nodes.extend(overlap_nodes)
+        node_roles.extend(['overlap'] * len(overlap_nodes))
 
-        community_boundaries.append(len(node_order))
+        community_boundaries.append(len(extended_nodes))
         community_labels.append(f'C{i}')
 
-    remaining = sorted(set(range(N)) - already_added)
-    if remaining:
-        node_order.extend(remaining)
-        community_boundaries.append(len(node_order))
-        community_labels.append('No asignado')
+    M = len(extended_nodes)
+    W = np.zeros((M, M))
 
-    reordered_W = W[np.ix_(node_order, node_order)]
+    # 3. Rellenar la matriz MxM basada en la matriz de consenso original
+    for i in range(M):
+        for j in range(M):
+            node_i = extended_nodes[i]
+            node_j = extended_nodes[j]
 
-    # Plot
+            base_val = match_array[node_i, node_j]
+
+            # Ajustar intensidad según el rol (núcleo o solapado)
+            if node_roles[i] == 'core' and node_roles[j] == 'core':
+                intensity = w_core
+            else:
+                # Solapado: ajustamos según el grado de solapamiento
+                penalty_i = 1 / node_to_num_comms[node_i]
+                penalty_j = 1 / node_to_num_comms[node_j]
+                intensity = w_overlap_base * min(penalty_i, penalty_j)
+
+            W[i, j] = base_val * intensity
+
+    return W, extended_nodes, node_roles, community_boundaries, community_labels
+
+def plot_fuzzy_matrix(W, extended_nodes, community_boundaries, community_labels,
+                      gamma, alpha, output_path=None):
+
+    M = W.shape[0]
     fig, ax = plt.subplots(figsize=(12, 10))
-    im = ax.imshow(reordered_W, cmap='YlGnBu', vmin=0, vmax=1.0)
 
-    # Etiquetas de ejes: índices reales de los nodos
-    tick_positions = np.arange(len(node_order))
-    ax.set_xticks(tick_positions)
-    ax.set_yticks(tick_positions)
-    ax.set_xticklabels(node_order, rotation=90, fontsize=6)
-    ax.set_yticklabels(node_order, fontsize=6)
+    W_masked = mask_offdiagonal_blocks(W, community_boundaries)
+    im = ax.imshow(W_masked, cmap='YlGnBu', vmin=0, vmax=np.nanmax(W))
 
-    # Líneas blancas de comunidad
+    # Quitar etiquetas de los ejes
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    # Líneas entre comunidades
     for b in community_boundaries[1:-1]:
         ax.axhline(y=b - 0.5, color='white', linewidth=2)
         ax.axvline(x=b - 0.5, color='white', linewidth=2)
 
-    # Etiquetas de comunidad en el margen
+    # Etiquetas de comunidad en márgenes
     for idx, (start, end) in enumerate(zip(community_boundaries[:-1], community_boundaries[1:])):
         if end > start:
             mid = (start + end) // 2
             ax.text(-3, mid, community_labels[idx], va='center', ha='right', fontsize=8, fontweight='bold', transform=ax.transData)
-            ax.text(mid, len(node_order) + 1, community_labels[idx], va='top', ha='center', fontsize=8, fontweight='bold', rotation=90, transform=ax.transData)
+            ax.text(mid, M + 1, community_labels[idx], va='top', ha='center', fontsize=8, fontweight='bold', rotation=90, transform=ax.transData)
 
-    ax.set_title(f'Matriz Difusa de Consenso\n(γ={gamma}, α={alpha})', fontsize=14, fontweight='bold')
-    ax.set_xlabel('Índice de nodo (reordenado)', fontsize=10)
-    ax.set_ylabel('Índice de nodo (reordenado)', fontsize=10)
+    ax.set_title(f'Matriz Fuzzy por Comunidad\n(γ={gamma}, α={alpha})', fontsize=14)
+    ax.set_xlabel('Nodos (repetidos por comunidad)', fontsize=10)
+    ax.set_ylabel('Nodos (repetidos por comunidad)', fontsize=10)
 
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label('Nivel de pertenencia estructural', fontsize=12)
+    cbar.set_label('Pertenencia fuzzy', fontsize=12)
 
     plt.tight_layout()
 
     if output_path:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"✅ Matriz difusa guardada: {output_path}")
+        print(f"✅ Matriz fuzzy guardada: {output_path}")
 
     plt.show()
 
-    return node_order
+def mask_offdiagonal_blocks(W, community_boundaries):
+    """
+    Anula las celdas fuera de los bloques diagonales (inter-comunidad).
+    """
+    M = W.shape[0]
+    masked_W = np.full_like(W, np.nan, dtype=float)
 
+    for start, end in zip(community_boundaries[:-1], community_boundaries[1:]):
+        masked_W[start:end, start:end] = W[start:end, start:end]
 
+    return masked_W
 
 def plot_consensus_quality_metrics(match_array, coverage_inf, coverage_sup, 
                                  gamma, alpha, output_path=None):
