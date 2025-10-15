@@ -10,7 +10,7 @@ from consensus_signed import (
     save_overlapping_to_txt,
     save_result
 )
-from consensus_visualization import build_fuzzy_consensus_matrix, plot_consensus_graph, export_consensus_to_gephi_gexf, plot_fuzzy_consensus_heatmap,  plot_structured_consensus_matrix
+from consensus_visualization import build_fuzzy_matrix_with_repeats, plot_consensus_graph, export_consensus_to_gephi_gexf, plot_fuzzy_matrix,  plot_structured_consensus_matrix
 import pandas as pd
 import re
 
@@ -63,26 +63,30 @@ def main():
             match_array = build_match_array(communities, N)
             
             # Matriz ordenada por comunidades obtenidas
-            plot_structured_consensus_matrix(
+            # plot_structured_consensus_matrix(
+            #     match_array=match_array,
+            #     coverage_inf=coverage_inf,
+            #     coverage_sup=coverage_sup,
+            #     gamma=gamma,
+            #     alpha=alpha,
+            #     output_path=os.path.join(out_folder, "consensus_matrix_structured.png"))
+            
+            W, extended_nodes, node_roles, community_boundaries, community_labels = build_fuzzy_matrix_with_repeats(
                 match_array=match_array,
                 coverage_inf=coverage_inf,
                 coverage_sup=coverage_sup,
-                gamma=gamma,
-                alpha=alpha,
-                output_path=os.path.join(out_folder, "consensus_matrix_structured.png"))
-            
-            # Construir matriz difusa
-            W = build_fuzzy_consensus_matrix(N=match_array.shape[0],
-                                            coverage_inf=coverage_inf,
-                                            coverage_sup=coverage_sup)
+                w_core=1.0,
+                w_overlap_base=0.6  # puedes ajustar esto según tu sensibilidad deseada
+            )
 
-            # Visualizar
-            plot_fuzzy_consensus_heatmap(W,
-                                        coverage_inf=coverage_inf,
-                                        coverage_sup=coverage_sup,
-                                        gamma=gamma,
-                                        alpha=alpha,
-                                        output_path=os.path.join(out_folder, "fuzzy_consensus_heatmap.png"))
+            plot_fuzzy_matrix(W,
+                            extended_nodes,
+                            community_boundaries,
+                            community_labels,
+                            gamma=gamma,
+                            alpha=alpha,
+                            output_path=os.path.join(out_folder, "fuzzy_matrix_community.png"))
+
 
             
 
