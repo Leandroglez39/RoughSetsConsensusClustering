@@ -284,7 +284,7 @@ def plot_fuzzy_matrix(W, extended_nodes, community_boundaries, community_labels,
             ax.text(-3, mid, community_labels[idx], va='center', ha='right', fontsize=8, fontweight='bold', transform=ax.transData)
             ax.text(mid, M + 1, community_labels[idx], va='top', ha='center', fontsize=8, fontweight='bold', rotation=90, transform=ax.transData)
 
-    ax.set_title(f'Matriz Fuzzy por Comunidad\n(γ={gamma}, α={alpha})', fontsize=14)
+    ax.set_title(f'Matriz Fuzzy por Comunidad\n(γ={gamma}, α={alpha*(-1)})', fontsize=14)
     ax.set_xlabel('Nodos (repetidos por comunidad)', fontsize=10)
     ax.set_ylabel('Nodos (repetidos por comunidad)', fontsize=10)
 
