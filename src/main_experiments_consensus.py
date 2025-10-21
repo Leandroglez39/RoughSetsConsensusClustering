@@ -64,7 +64,7 @@ def main():
             
             # Matriz ordenada por comunidades obtenidas
             # plot_structured_consensus_matrix(
-            #     match_array=match_array,
+            #     match_array=match_array,k
             #     coverage_inf=coverage_inf,
             #     coverage_sup=coverage_sup,
             #     gamma=gamma,
