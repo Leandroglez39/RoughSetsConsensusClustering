@@ -316,17 +316,19 @@ def plot_consensus_quality_metrics(match_array, coverage_inf, coverage_sup,
     """
     Gráfico complementario con métricas de calidad del consenso
     """
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
+    fig, ax2 = plt.subplots(figsize=(12, 6))
+
+    # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))    
     
-    # 1. Histograma de valores de consenso
-    upper_tri = match_array[np.triu_indices_from(match_array, k=1)]
-    ax1.hist(upper_tri, bins=30, alpha=0.7, edgecolor='black')
-    ax1.set_xlabel('Frecuencia de co-pertenencia')
-    ax1.set_ylabel('Número de pares de nodos')
-    ax1.set_title('Distribución de Valores de Consenso')
-    ax1.axvline(np.mean(upper_tri), color='red', linestyle='--', 
-               label=f'Media: {np.mean(upper_tri):.2f}')
-    ax1.legend()
+    # # 1. Histograma de valores de consenso
+    # upper_tri = match_array[np.triu_indices_from(match_array, k=1)]
+    # ax1.hist(upper_tri, bins=30, alpha=0.7, edgecolor='black')
+    # ax1.set_xlabel('Frecuencia de co-pertenencia')
+    # ax1.set_ylabel('Número de pares de nodos')
+    # ax1.set_title('Distribución de Valores de Consenso')
+    # ax1.axvline(np.mean(upper_tri), color='red', linestyle='--', 
+    #            label=f'Media: {np.mean(upper_tri):.2f}')
+    # ax1.legend()
     
     # 2. Tamaños de comunidades
     community_sizes = []
@@ -350,64 +352,64 @@ def plot_consensus_quality_metrics(match_array, coverage_inf, coverage_sup,
     ax2.set_title('Composición de Comunidades')
     ax2.legend()
     
-    # 3. Fuerza intra-comunidad vs inter-comunidad
-    intra_strengths = []
-    inter_strengths = []
+    # # 3. Fuerza intra-comunidad vs inter-comunidad
+    # intra_strengths = []
+    # inter_strengths = []
     
-    for i, sup_i in enumerate(coverage_sup):
-        nodes_i = set(sup_i)
+    # for i, sup_i in enumerate(coverage_sup):
+    #     nodes_i = set(sup_i)
         
-        # Fuerza intra-comunidad
-        if len(nodes_i) > 1:
-            intra_pairs = [(n1, n2) for n1 in nodes_i for n2 in nodes_i if n1 < n2]
-            intra_strength = np.mean([match_array[n1, n2] for n1, n2 in intra_pairs])
-            intra_strengths.append(intra_strength)
+    #     # Fuerza intra-comunidad
+    #     if len(nodes_i) > 1:
+    #         intra_pairs = [(n1, n2) for n1 in nodes_i for n2 in nodes_i if n1 < n2]
+    #         intra_strength = np.mean([match_array[n1, n2] for n1, n2 in intra_pairs])
+    #         intra_strengths.append(intra_strength)
         
-        # Fuerza inter-comunidad (promedio con otras comunidades)
-        inter_strength_vals = []
-        for j, sup_j in enumerate(coverage_sup):
-            if i != j:
-                nodes_j = set(sup_j)
-                inter_pairs = [(n1, n2) for n1 in nodes_i for n2 in nodes_j]
-                if inter_pairs:
-                    inter_strength_vals.extend([match_array[n1, n2] for n1, n2 in inter_pairs])
+    #     # Fuerza inter-comunidad (promedio con otras comunidades)
+    #     inter_strength_vals = []
+    #     for j, sup_j in enumerate(coverage_sup):
+    #         if i != j:
+    #             nodes_j = set(sup_j)
+    #             inter_pairs = [(n1, n2) for n1 in nodes_i for n2 in nodes_j]
+    #             if inter_pairs:
+    #                 inter_strength_vals.extend([match_array[n1, n2] for n1, n2 in inter_pairs])
         
-        if inter_strength_vals:
-            inter_strengths.append(np.mean(inter_strength_vals))
+    #     if inter_strength_vals:
+    #         inter_strengths.append(np.mean(inter_strength_vals))
     
-    ax3.scatter(range(len(intra_strengths)), intra_strengths, 
-               label='Intra-comunidad', alpha=0.7, s=60)
-    if inter_strengths:
-        ax3.scatter(range(len(inter_strengths)), inter_strengths, 
-                   label='Inter-comunidad', alpha=0.7, s=60)
-    ax3.set_xlabel('Comunidad')
-    ax3.set_ylabel('Fuerza de consenso promedio')
-    ax3.set_title('Fuerza Intra vs Inter-comunidad')
-    ax3.legend()
+    # ax3.scatter(range(len(intra_strengths)), intra_strengths, 
+    #            label='Intra-comunidad', alpha=0.7, s=60)
+    # if inter_strengths:
+    #     ax3.scatter(range(len(inter_strengths)), inter_strengths, 
+    #                label='Inter-comunidad', alpha=0.7, s=60)
+    # ax3.set_xlabel('Comunidad')
+    # ax3.set_ylabel('Fuerza de consenso promedio')
+    # ax3.set_title('Fuerza Intra vs Inter-comunidad')
+    # ax3.legend()
     
-    # 4. Modularidad del consenso (simplificada)
-    total_edges = np.sum(match_array) / 2
-    modularity_terms = []
+    # # 4. Modularidad del consenso (simplificada)
+    # total_edges = np.sum(match_array) / 2
+    # modularity_terms = []
     
-    for sup in coverage_sup:
-        nodes = list(set(sup))
-        if len(nodes) > 1:
-            # Edges dentro de la comunidad
-            internal_edges = sum(match_array[i, j] for i in nodes for j in nodes if i < j)
-            # Grado esperado (simplificado)
-            degree_sum = sum(np.sum(match_array[i, :]) for i in nodes)
-            expected = (degree_sum ** 2) / (4 * total_edges) if total_edges > 0 else 0
-            modularity_terms.append(internal_edges - expected)
+    # for sup in coverage_sup:
+    #     nodes = list(set(sup))
+    #     if len(nodes) > 1:
+    #         # Edges dentro de la comunidad
+    #         internal_edges = sum(match_array[i, j] for i in nodes for j in nodes if i < j)
+    #         # Grado esperado (simplificado)
+    #         degree_sum = sum(np.sum(match_array[i, :]) for i in nodes)
+    #         expected = (degree_sum ** 2) / (4 * total_edges) if total_edges > 0 else 0
+    #         modularity_terms.append(internal_edges - expected)
     
-    ax4.bar(range(len(modularity_terms)), modularity_terms, alpha=0.7)
-    ax4.set_xlabel('Comunidad')
-    ax4.set_ylabel('Contribución a Modularidad')
-    ax4.set_title('Contribución por Comunidad a la Modularidad')
-    ax4.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+    # ax4.bar(range(len(modularity_terms)), modularity_terms, alpha=0.7)
+    # ax4.set_xlabel('Comunidad')
+    # ax4.set_ylabel('Contribución a Modularidad')
+    # ax4.set_title('Contribución por Comunidad a la Modularidad')
+    # ax4.axhline(y=0, color='black', linestyle='-', alpha=0.3)
     
-    plt.suptitle(f'Métricas de Calidad del Consenso (γ={gamma}, α={alpha})', 
-                fontsize=16, fontweight='bold')
-    plt.tight_layout()
+    # plt.suptitle(f'Métricas de Calidad del Consenso (γ={gamma}, α={alpha})', 
+    #             fontsize=16, fontweight='bold')
+    # plt.tight_layout()
     
     if output_path:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
