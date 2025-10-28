@@ -417,6 +417,7 @@ def plot_consensus_quality_metrics(match_array, coverage_inf, coverage_sup,
     plt.show()
 
 
+
 def plot_community_evolution_across_gamma(
     gamma_values: List[float],
     consensus_results: List[tuple],
@@ -428,19 +429,21 @@ def plot_community_evolution_across_gamma(
     """
     Visualiza cómo evolucionan las comunidades a medida que varía gamma.
     
+    Los nodos que pertenecen a múltiples comunidades se REPITEN en la visualización,
+    mostrando la cardinalidad real de cada comunidad.
+    
     Interpretación de gamma:
     - Gamma ALTO (ej: 0.7): Más riguroso, MENOS solapamiento
     - Gamma BAJO (ej: 0.3): Menos riguroso, MÁS solapamiento
     
     Visualización:
-    - Eje X: Gamma (de mayor a menor = menos a más solapamiento)
-    - Eje Y: Nodos agrupados por comunidades
-      * Primero: núcleos de C0, luego solapados de C0
-      * Después: núcleos de C1, luego solapados de C1
-      * Y así sucesivamente...
-    - Colores por columna (gamma):
-      * Núcleo: color vivo de la comunidad (NO grises)
-      * Solapado: escala de grises (intensidad según número de comunidades)
+    - Eje X: Gamma (de mayor a menor = de menos a más solapamiento)
+    - Eje Y: Nodos REPETIDOS por cada comunidad
+      * Por cada comunidad: PRIMERO núcleos, LUEGO solapados
+      * Los nodos solapados aparecen en MÚLTIPLES comunidades
+    - Colores:
+      * Núcleo: color vivo de la comunidad
+      * Solapado: escala de grises según intensidad
     
     Parameters:
     -----------
@@ -455,12 +458,11 @@ def plot_community_evolution_across_gamma(
     figsize : tuple
         Tamaño de la figura
     reverse_gamma : bool
-        Si True, ordena gamma de mayor a menor (menos a más solapamiento)
+        Si True, ordena gamma de mayor a menor
     """
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
-    from matplotlib.colors import ListedColormap
     
     # Validación
     if len(gamma_values) != len(consensus_results):
@@ -477,121 +479,116 @@ def plot_community_evolution_across_gamma(
     
     n_gammas = len(gamma_values)
     
-    # Usar el consenso con gamma más alto (más riguroso) como base para estructura
+    # Usar el consenso con gamma más alto (más riguroso) como base
     cov_inf_base, cov_sup_base = consensus_results[0]
     n_communities_base = len(cov_sup_base)
     
-    # Determinar número máximo de comunidades entre todos los gammas
+    # Determinar número máximo de comunidades
     max_communities = max(len(cov_sup) for _, cov_sup in consensus_results)
     
-    # === PALETA DE COLORES VIVOS (NO GRISES) PARA COMUNIDADES ===
-    # Usar colores distintivos y saturados
+    # === PALETA DE COLORES VIVOS PARA COMUNIDADES ===
     if max_communities <= 10:
-        # Para pocas comunidades: usar Set1 (colores muy distintivos)
         base_cmap = plt.cm.Set1
         colors = base_cmap(np.linspace(0, 0.9, max_communities))
     elif max_communities <= 20:
-        # Para comunidades moderadas: tab20 (20 colores distintivos)
         base_cmap = plt.cm.tab20
         colors = base_cmap(np.linspace(0, 1, max_communities))
     else:
-        # Para muchas comunidades: hsv (espectro completo)
         base_cmap = plt.cm.hsv
         colors = base_cmap(np.linspace(0, 0.95, max_communities))
     
-    # Asegurar que NO haya grises en la paleta de comunidades
-    # Reemplazar colores demasiado grises (saturación baja) con colores vivos
+    # Filtrar colores grises
     for i in range(len(colors)):
         r, g, b, a = colors[i]
-        # Calcular saturación (diferencia entre max y min de RGB)
         max_rgb = max(r, g, b)
         min_rgb = min(r, g, b)
         saturation = max_rgb - min_rgb
         
-        # Si saturación es muy baja (color grisáceo), reemplazar con color vivo
         if saturation < 0.3:
-            # Generar color aleatorio vivo basado en índice
-            hue = (i * 137.5) % 360  # Proporción áurea para distribución uniforme
+            hue = (i * 137.5) % 360
             colors[i] = plt.cm.hsv(hue / 360.0)
     
-    # === PASO 1: ORDENAR NODOS EN EJE Y ===
-    # Por cada comunidad: primero núcleos, luego solapados
+    # === PASO 1: CREAR LISTA DE NODOS CON REPETICIONES ===
+    # Orden: Para cada comunidad -> primero núcleos, luego solapados
     node_order = []
+    node_to_communities = {}
     community_boundaries = [0]
-    node_to_base_community = {}
+    community_sizes = []
     
     for comm_idx, (inf_base, sup_base) in enumerate(zip(cov_inf_base, cov_sup_base)):
-        # 1. Núcleos de esta comunidad (coverage_inf)
+        # Separar núcleos y solapados de esta comunidad
         core_nodes = sorted(set(inf_base))
-        node_order.extend(core_nodes)
-        
-        for node in core_nodes:
-            node_to_base_community[node] = comm_idx
-        
-        # 2. Solapados de esta comunidad (en sup pero no en inf)
         overlap_nodes = sorted(set(sup_base) - set(inf_base))
-        node_order.extend(overlap_nodes)
         
+        # PRIMERO: Agregar núcleos
+        for node in core_nodes:
+            node_order.append((node, comm_idx))
+            
+            if node not in node_to_communities:
+                node_to_communities[node] = []
+            node_to_communities[node].append(comm_idx)
+        
+        # DESPUÉS: Agregar solapados
         for node in overlap_nodes:
-            if node not in node_to_base_community:
-                node_to_base_community[node] = comm_idx
+            node_order.append((node, comm_idx))
+            
+            if node not in node_to_communities:
+                node_to_communities[node] = []
+            node_to_communities[node].append(comm_idx)
+        
+        # Guardar cardinalidad total de la comunidad
+        community_sizes.append(len(core_nodes) + len(overlap_nodes))
         
         # Marcar fin de esta comunidad
         community_boundaries.append(len(node_order))
     
-    # Nodos no asignados en la base (opcional, al final)
-    all_nodes = set()
-    for sup in cov_sup_base:
-        all_nodes.update(sup)
-    
-    max_node = max(all_nodes) if all_nodes else 0
-    assigned_nodes = set(node_order)
-    remaining_nodes = sorted(set(range(max_node + 1)) - assigned_nodes)
-    node_order.extend(remaining_nodes)
-    
     n_ordered_nodes = len(node_order)
     
     # === PASO 2: CREAR MATRIZ DE COLORES ===
-    # Para cada (nodo, gamma) determinar color
     color_matrix = np.ones((n_ordered_nodes, n_gammas, 3))
     
     for gamma_idx, (cov_inf, cov_sup) in enumerate(consensus_results):
-        for ordered_idx, node in enumerate(node_order):
+        for ordered_idx, (node, base_comm) in enumerate(node_order):
             # Buscar en qué comunidades está el nodo en ESTE gamma
             communities_with_node = []
-            is_core_in_any = False
+            is_core_somewhere = False
             core_community = None
             
             for comm_idx, (inf, sup) in enumerate(zip(cov_inf, cov_sup)):
                 if node in sup:
                     communities_with_node.append(comm_idx)
                     if node in inf:
-                        is_core_in_any = True
+                        is_core_somewhere = True
+                        # Si es núcleo en la comunidad base, usar esa
+                        if comm_idx == base_comm:
+                            core_community = comm_idx
+            
+            # Si es núcleo en alguna comunidad pero no en la base, usar la primera
+            if is_core_somewhere and core_community is None:
+                for comm_idx, inf in enumerate(cov_inf):
+                    if node in inf:
                         core_community = comm_idx
+                        break
             
             n_comms = len(communities_with_node)
             
             # Determinar color
             if n_comms == 0:
-                # No asignado: blanco
+                # No asignado en este gamma: blanco
                 color_matrix[ordered_idx, gamma_idx] = [1, 1, 1]
                 
-            elif is_core_in_any:
-                # Es NÚCLEO en este gamma: color VIVO de la comunidad
+            elif is_core_somewhere and core_community is not None:
+                # Es NÚCLEO: color de la comunidad
                 color_matrix[ordered_idx, gamma_idx] = colors[core_community][:3]
                 
+            elif n_comms == 1:
+                # En una sola comunidad (no núcleo): color de esa comunidad
+                color_matrix[ordered_idx, gamma_idx] = colors[communities_with_node[0]][:3]
+                
             else:
-                # Es SOLAPADO en este gamma: GRIS
-                if n_comms == 1:
-                    # En una sola comunidad (pero no es núcleo)
-                    # Gris muy claro
-                    intensity = 0.75
-                    color_matrix[ordered_idx, gamma_idx] = [intensity, intensity, intensity]
-                else:
-                    # En múltiples comunidades: gris más oscuro según cantidad
-                    # Escala de grises: de 0.7 (claro, 2 comunidades) a 0.2 (oscuro, muchas)
-                    intensity = max(0.2, 0.8 - (n_comms / max_communities) * 0.6)
-                    color_matrix[ordered_idx, gamma_idx] = [intensity, intensity, intensity]
+                # SOLAPADO en múltiples comunidades: gris según intensidad
+                intensity = max(0.2, 0.8 - (n_comms / max_communities) * 0.6)
+                color_matrix[ordered_idx, gamma_idx] = [intensity, intensity, intensity]
     
     # === PASO 3: CREAR FIGURA ===
     fig, ax = plt.subplots(figsize=figsize)
@@ -600,25 +597,25 @@ def plot_community_evolution_across_gamma(
     ax.imshow(color_matrix, aspect='auto', interpolation='nearest')
     
     # === PASO 4: CONFIGURAR EJES ===
-    # Eje Y (nodos agrupados por comunidades)
-    ax.set_ylabel('Nodos (por comunidad)', fontsize=14, fontweight='bold')
+    # Eje Y (nodos repetidos por comunidad)
+    ax.set_ylabel('Nodos (repetidos por comunidad)', fontsize=14, fontweight='bold')
     
-    # Etiquetas de nodos
-    if n_ordered_nodes <= 100:
-        tick_step = max(1, n_ordered_nodes // 25)
+    # Etiquetas de nodos (mostrar algunos IDs)
+    if n_ordered_nodes <= 150:
+        tick_step = max(1, n_ordered_nodes // 30)
         y_ticks = list(range(0, n_ordered_nodes, tick_step))
-        y_labels = [f'{node_order[i]}' for i in y_ticks]
+        y_labels = [f'{node_order[i][0]}' for i in y_ticks]  # Solo el ID del nodo
         ax.set_yticks(y_ticks)
-        ax.set_yticklabels(y_labels, fontsize=8)
+        ax.set_yticklabels(y_labels, fontsize=7)
     
-    # Líneas separadoras entre comunidades
+    # Líneas BLANCAS DISCONTINUAS separadoras entre comunidades
     for boundary in community_boundaries[1:-1]:
         if boundary < n_ordered_nodes:
-            ax.axhline(y=boundary - 0.5, color='black', linewidth=2.5, 
-                      linestyle='-', alpha=0.6)
+            ax.axhline(y=boundary - 0.5, color='white', linewidth=2.5, 
+                      linestyle='--', alpha=0.9)
     
-    # Eje X (gamma)
-    ax.set_xlabel('Gamma (← Más solapamiento | Menos solapamiento →)', 
+    # Eje X (gamma) - CORREGIDO
+    ax.set_xlabel('Gamma (Menos solapamiento  ←  |  →  Más solapamiento)', 
                   fontsize=14, fontweight='bold')
     ax.set_xticks(range(n_gammas))
     ax.set_xticklabels([f'{g:.2f}' for g in gamma_values], fontsize=12)
@@ -630,18 +627,28 @@ def plot_community_evolution_across_gamma(
     ax.set_xticks(np.arange(n_gammas) - 0.5, minor=True)
     ax.grid(which='minor', axis='x', color='black', linewidth=1, alpha=0.3)
     
-    # === PASO 5: LEYENDA MEJORADA ===
+    # === PASO 5: LEYENDA CON CARDINALIDADES ===
     legend_elements = []
     
-    # Mostrar colores de comunidades (máximo 12 para no saturar)
+    # Título de sección: Comunidades
+    legend_elements.append(
+        mpatches.Patch(
+            facecolor='none',
+            edgecolor='none',
+            label='── Comunidades (|C|) ──'
+        )
+    )
+    
+    # Mostrar comunidades con sus cardinalidades
     n_show = min(n_communities_base, 12)
     for comm_idx in range(n_show):
+        cardinality = community_sizes[comm_idx]
         legend_elements.append(
             mpatches.Patch(
                 facecolor=colors[comm_idx],
                 edgecolor='black',
                 linewidth=0.5,
-                label=f'C{comm_idx}'
+                label=f'C{comm_idx} (|{cardinality}|)'
             )
         )
     
@@ -655,20 +662,20 @@ def plot_community_evolution_across_gamma(
             )
         )
     
-    # Separador visual
+    # Separador
     legend_elements.append(
         mpatches.Patch(
             facecolor='none',
             edgecolor='none',
-            label='―――――――――'
+            label='── Solapamiento ──'
         )
     )
     
-    # Escala de grises para solapamiento
+    # Escala de grises
     gray_levels = [
-        (0.75, '1-2 comunidades'),
-        (0.50, '3-4 comunidades'),
-        (0.25, '5+ comunidades')
+        (0.75, 'Bajo (1-2 com.)'),
+        (0.50, 'Medio (3-4 com.)'),
+        (0.25, 'Alto (5+ com.)')
     ]
     
     for gray_val, label in gray_levels:
@@ -691,16 +698,17 @@ def plot_community_evolution_across_gamma(
         )
     )
     
-    # Etiquetas de comunidades en el eje Y
+    # Etiquetas de comunidades en el eje Y (con cardinalidad)
     for comm_idx in range(n_communities_base):
         if comm_idx < len(community_boundaries) - 1:
             start = community_boundaries[comm_idx]
             end = community_boundaries[comm_idx + 1]
             if end > start:
                 mid = (start + end) / 2
-                ax.text(-0.8, mid, f'C{comm_idx}', 
-                       ha='right', va='center', fontsize=11, fontweight='bold',
-                       bbox=dict(boxstyle='round,pad=0.4', 
+                cardinality = community_sizes[comm_idx]
+                ax.text(-1.5, mid, f'C{comm_idx}\n|{cardinality}|', 
+                       ha='right', va='center', fontsize=10, fontweight='bold',
+                       bbox=dict(boxstyle='round,pad=0.5', 
                                 facecolor=colors[comm_idx], 
                                 alpha=0.7, 
                                 edgecolor='black', 
@@ -730,3 +738,630 @@ def plot_community_evolution_across_gamma(
     plt.show()
     
     return fig, ax
+
+# def plot_community_evolution_across_gamma(
+#     gamma_values: List[float],
+#     consensus_results: List[tuple],
+#     output_path: Optional[str] = None,
+#     title: str = "Evolución de Comunidades según Gamma",
+#     figsize: tuple = (14, 10),
+#     reverse_gamma: bool = True
+# ):
+#     """
+#     Visualiza cómo evolucionan las comunidades a medida que varía gamma.
+    
+#     Los nodos que pertenecen a múltiples comunidades se REPITEN en la visualización,
+#     mostrando la cardinalidad real de cada comunidad.
+    
+#     Interpretación de gamma:
+#     - Gamma ALTO (ej: 0.7): Más riguroso, MENOS solapamiento
+#     - Gamma BAJO (ej: 0.3): Menos riguroso, MÁS solapamiento
+    
+#     Visualización:
+#     - Eje X: Gamma (de mayor a menor = de menos a más solapamiento)
+#     - Eje Y: Nodos REPETIDOS por cada comunidad a la que pertenecen
+#       * Cada comunidad muestra TODOS sus nodos (núcleo + solapados)
+#       * Los nodos solapados aparecen en MÚLTIPLES comunidades
+#     - Colores:
+#       * Núcleo: color vivo de la comunidad
+#       * Solapado: escala de grises según intensidad
+    
+#     Parameters:
+#     -----------
+#     gamma_values : List[float]
+#         Lista de valores de gamma, ej: [0.3, 0.5, 0.7]
+#     consensus_results : List[tuple]
+#         Lista de tuplas (coverage_inf, coverage_sup) para cada gamma
+#     output_path : str, optional
+#         Ruta donde guardar la imagen
+#     title : str
+#         Título del gráfico
+#     figsize : tuple
+#         Tamaño de la figura
+#     reverse_gamma : bool
+#         Si True, ordena gamma de mayor a menor
+#     """
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     import matplotlib.patches as mpatches
+    
+#     # Validación
+#     if len(gamma_values) != len(consensus_results):
+#         raise ValueError("gamma_values y consensus_results deben tener la misma longitud")
+    
+#     # Ordenar por gamma (de mayor a menor si reverse_gamma=True)
+#     if reverse_gamma:
+#         sorted_indices = np.argsort(gamma_values)[::-1]
+#     else:
+#         sorted_indices = np.argsort(gamma_values)
+    
+#     gamma_values = [gamma_values[i] for i in sorted_indices]
+#     consensus_results = [consensus_results[i] for i in sorted_indices]
+    
+#     n_gammas = len(gamma_values)
+    
+#     # Usar el consenso con gamma más alto (más riguroso) como base
+#     cov_inf_base, cov_sup_base = consensus_results[0]
+#     n_communities_base = len(cov_sup_base)
+    
+#     # Determinar número máximo de comunidades
+#     max_communities = max(len(cov_sup) for _, cov_sup in consensus_results)
+    
+#     # === PALETA DE COLORES VIVOS PARA COMUNIDADES ===
+#     if max_communities <= 10:
+#         base_cmap = plt.cm.Set1
+#         colors = base_cmap(np.linspace(0, 0.9, max_communities))
+#     elif max_communities <= 20:
+#         base_cmap = plt.cm.tab20
+#         colors = base_cmap(np.linspace(0, 1, max_communities))
+#     else:
+#         base_cmap = plt.cm.hsv
+#         colors = base_cmap(np.linspace(0, 0.95, max_communities))
+    
+#     # Filtrar colores grises
+#     for i in range(len(colors)):
+#         r, g, b, a = colors[i]
+#         max_rgb = max(r, g, b)
+#         min_rgb = min(r, g, b)
+#         saturation = max_rgb - min_rgb
+        
+#         if saturation < 0.3:
+#             hue = (i * 137.5) % 360
+#             colors[i] = plt.cm.hsv(hue / 360.0)
+    
+#     # === PASO 1: CREAR LISTA DE NODOS CON REPETICIONES ===
+#     # Cada nodo aparece una vez por cada comunidad a la que pertenece
+#     node_order = []
+#     node_to_communities = {}  # nodo -> [lista de comunidades]
+#     community_boundaries = [0]
+#     community_sizes = []  # Para la leyenda
+    
+#     for comm_idx, (inf_base, sup_base) in enumerate(zip(cov_inf_base, cov_sup_base)):
+#         # TODOS los nodos de esta comunidad (núcleo + solapados)
+#         all_nodes_in_comm = sorted(set(sup_base))
+        
+#         # Agregar cada nodo a la visualización
+#         for node in all_nodes_in_comm:
+#             node_order.append((node, comm_idx))  # Tupla: (nodo_id, comunidad)
+            
+#             # Registrar que este nodo está en esta comunidad
+#             if node not in node_to_communities:
+#                 node_to_communities[node] = []
+#             node_to_communities[node].append(comm_idx)
+        
+#         # Guardar cardinalidad de la comunidad
+#         community_sizes.append(len(all_nodes_in_comm))
+        
+#         # Marcar fin de esta comunidad
+#         community_boundaries.append(len(node_order))
+    
+#     n_ordered_nodes = len(node_order)
+    
+#     # === PASO 2: CREAR MATRIZ DE COLORES ===
+#     color_matrix = np.ones((n_ordered_nodes, n_gammas, 3))
+    
+#     for gamma_idx, (cov_inf, cov_sup) in enumerate(consensus_results):
+#         for ordered_idx, (node, base_comm) in enumerate(node_order):
+#             # Buscar en qué comunidades está el nodo en ESTE gamma
+#             communities_with_node = []
+#             is_core_somewhere = False
+#             core_community = None
+            
+#             for comm_idx, (inf, sup) in enumerate(zip(cov_inf, cov_sup)):
+#                 if node in sup:
+#                     communities_with_node.append(comm_idx)
+#                     if node in inf:
+#                         is_core_somewhere = True
+#                         # Si es núcleo en la comunidad base, usar esa
+#                         if comm_idx == base_comm:
+#                             core_community = comm_idx
+            
+#             # Si es núcleo en alguna comunidad pero no en la base, usar la primera
+#             if is_core_somewhere and core_community is None:
+#                 for comm_idx, inf in enumerate(cov_inf):
+#                     if node in inf:
+#                         core_community = comm_idx
+#                         break
+            
+#             n_comms = len(communities_with_node)
+            
+#             # Determinar color
+#             if n_comms == 0:
+#                 # No asignado en este gamma: blanco
+#                 color_matrix[ordered_idx, gamma_idx] = [1, 1, 1]
+                
+#             elif is_core_somewhere and core_community is not None:
+#                 # Es NÚCLEO: color de la comunidad
+#                 color_matrix[ordered_idx, gamma_idx] = colors[core_community][:3]
+                
+#             elif n_comms == 1:
+#                 # En una sola comunidad (no núcleo): color de esa comunidad
+#                 color_matrix[ordered_idx, gamma_idx] = colors[communities_with_node[0]][:3]
+                
+#             else:
+#                 # SOLAPADO en múltiples comunidades: gris según intensidad
+#                 intensity = max(0.2, 0.8 - (n_comms / max_communities) * 0.6)
+#                 color_matrix[ordered_idx, gamma_idx] = [intensity, intensity, intensity]
+    
+#     # === PASO 3: CREAR FIGURA ===
+#     fig, ax = plt.subplots(figsize=figsize)
+    
+#     # Mostrar matriz
+#     ax.imshow(color_matrix, aspect='auto', interpolation='nearest')
+    
+#     # === PASO 4: CONFIGURAR EJES ===
+#     # Eje Y (nodos repetidos por comunidad)
+#     ax.set_ylabel('Nodos (repetidos por comunidad)', fontsize=14, fontweight='bold')
+    
+#     # Etiquetas de nodos (mostrar algunos IDs)
+#     if n_ordered_nodes <= 150:
+#         tick_step = max(1, n_ordered_nodes // 30)
+#         y_ticks = list(range(0, n_ordered_nodes, tick_step))
+#         y_labels = [f'{node_order[i][0]}' for i in y_ticks]  # Solo el ID del nodo
+#         ax.set_yticks(y_ticks)
+#         ax.set_yticklabels(y_labels, fontsize=7)
+    
+#     # Líneas BLANCAS DISCONTINUAS separadoras entre comunidades
+#     for boundary in community_boundaries[1:-1]:
+#         if boundary < n_ordered_nodes:
+#             ax.axhline(y=boundary - 0.5, color='white', linewidth=2.5, 
+#                       linestyle='--', alpha=0.9)
+    
+#     # Eje X (gamma) - CORREGIDO
+#     ax.set_xlabel('Gamma (Menos solapamiento  ←  |  →  Más solapamiento)', 
+#                   fontsize=14, fontweight='bold')
+#     ax.set_xticks(range(n_gammas))
+#     ax.set_xticklabels([f'{g:.2f}' for g in gamma_values], fontsize=12)
+    
+#     # Título
+#     ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
+    
+#     # Grid vertical sutil
+#     ax.set_xticks(np.arange(n_gammas) - 0.5, minor=True)
+#     ax.grid(which='minor', axis='x', color='black', linewidth=1, alpha=0.3)
+    
+#     # === PASO 5: LEYENDA CON CARDINALIDADES ===
+#     legend_elements = []
+    
+#     # Título de sección: Comunidades
+#     legend_elements.append(
+#         mpatches.Patch(
+#             facecolor='none',
+#             edgecolor='none',
+#             label='── Comunidades (|C|) ──'
+#         )
+#     )
+    
+#     # Mostrar comunidades con sus cardinalidades
+#     n_show = min(n_communities_base, 12)
+#     for comm_idx in range(n_show):
+#         cardinality = community_sizes[comm_idx]
+#         legend_elements.append(
+#             mpatches.Patch(
+#                 facecolor=colors[comm_idx],
+#                 edgecolor='black',
+#                 linewidth=0.5,
+#                 label=f'C{comm_idx} (|{cardinality}|)'
+#             )
+#         )
+    
+#     if n_communities_base > n_show:
+#         legend_elements.append(
+#             mpatches.Patch(
+#                 facecolor='white',
+#                 edgecolor='black',
+#                 hatch='///',
+#                 label=f'... +{n_communities_base - n_show} más'
+#             )
+#         )
+    
+#     # Separador
+#     legend_elements.append(
+#         mpatches.Patch(
+#             facecolor='none',
+#             edgecolor='none',
+#             label='── Solapamiento ──'
+#         )
+#     )
+    
+#     # Escala de grises
+#     gray_levels = [
+#         (0.75, 'Bajo (1-2 com.)'),
+#         (0.50, 'Medio (3-4 com.)'),
+#         (0.25, 'Alto (5+ com.)')
+#     ]
+    
+#     for gray_val, label in gray_levels:
+#         legend_elements.append(
+#             mpatches.Patch(
+#                 facecolor=[gray_val, gray_val, gray_val],
+#                 edgecolor='black',
+#                 linewidth=0.5,
+#                 label=label
+#             )
+#         )
+    
+#     # No asignado
+#     legend_elements.append(
+#         mpatches.Patch(
+#             facecolor='white',
+#             edgecolor='black',
+#             linewidth=0.5,
+#             label='No asignado'
+#         )
+#     )
+    
+#     # Etiquetas de comunidades en el eje Y (con cardinalidad)
+#     for comm_idx in range(n_communities_base):
+#         if comm_idx < len(community_boundaries) - 1:
+#             start = community_boundaries[comm_idx]
+#             end = community_boundaries[comm_idx + 1]
+#             if end > start:
+#                 mid = (start + end) / 2
+#                 cardinality = community_sizes[comm_idx]
+#                 ax.text(-1.5, mid, f'C{comm_idx}\n|{cardinality}|', 
+#                        ha='right', va='center', fontsize=10, fontweight='bold',
+#                        bbox=dict(boxstyle='round,pad=0.5', 
+#                                 facecolor=colors[comm_idx], 
+#                                 alpha=0.7, 
+#                                 edgecolor='black', 
+#                                 linewidth=1.5))
+    
+#     # Posicionar leyenda
+#     ax.legend(
+#         handles=legend_elements,
+#         bbox_to_anchor=(1.15, 1),
+#         loc='upper left',
+#         fontsize=9,
+#         title='Comunidades y Solapamiento',
+#         title_fontsize=10,
+#         frameon=True,
+#         fancybox=True,
+#         shadow=True,
+#         ncol=1
+#     )
+    
+#     plt.tight_layout()
+    
+#     # Guardar
+#     if output_path:
+#         plt.savefig(output_path, dpi=300, bbox_inches='tight')
+#         print(f"✅ Visualización guardada: {output_path}")
+    
+#     plt.show()
+    
+#     return fig, ax
+
+# def plot_community_evolution_across_gamma(
+#     gamma_values: List[float],
+#     consensus_results: List[tuple],
+#     output_path: Optional[str] = None,
+#     title: str = "Evolución de Comunidades según Gamma",
+#     figsize: tuple = (14, 10),
+#     reverse_gamma: bool = True
+# ):
+#     """
+#     Visualiza cómo evolucionan las comunidades a medida que varía gamma.
+    
+#     Interpretación de gamma:
+#     - Gamma ALTO (ej: 0.7): Más riguroso, MENOS solapamiento
+#     - Gamma BAJO (ej: 0.3): Menos riguroso, MÁS solapamiento
+    
+#     Visualización:
+#     - Eje X: Gamma (de mayor a menor = menos a más solapamiento)
+#     - Eje Y: Nodos agrupados por comunidades
+#       * Primero: núcleos de C0, luego solapados de C0
+#       * Después: núcleos de C1, luego solapados de C1
+#       * Y así sucesivamente...
+#     - Colores por columna (gamma):
+#       * Núcleo: color vivo de la comunidad (NO grises)
+#       * Solapado: escala de grises (intensidad según número de comunidades)
+    
+#     Parameters:
+#     -----------
+#     gamma_values : List[float]
+#         Lista de valores de gamma, ej: [0.3, 0.5, 0.7]
+#     consensus_results : List[tuple]
+#         Lista de tuplas (coverage_inf, coverage_sup) para cada gamma
+#     output_path : str, optional
+#         Ruta donde guardar la imagen
+#     title : str
+#         Título del gráfico
+#     figsize : tuple
+#         Tamaño de la figura
+#     reverse_gamma : bool
+#         Si True, ordena gamma de mayor a menor (menos a más solapamiento)
+#     """
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     import matplotlib.patches as mpatches
+#     from matplotlib.colors import ListedColormap
+    
+#     # Validación
+#     if len(gamma_values) != len(consensus_results):
+#         raise ValueError("gamma_values y consensus_results deben tener la misma longitud")
+    
+#     # Ordenar por gamma (de mayor a menor si reverse_gamma=True)
+#     if reverse_gamma:
+#         sorted_indices = np.argsort(gamma_values)[::-1]
+#     else:
+#         sorted_indices = np.argsort(gamma_values)
+    
+#     gamma_values = [gamma_values[i] for i in sorted_indices]
+#     consensus_results = [consensus_results[i] for i in sorted_indices]
+    
+#     n_gammas = len(gamma_values)
+    
+#     # Usar el consenso con gamma más alto (más riguroso) como base para estructura
+#     cov_inf_base, cov_sup_base = consensus_results[0]
+#     n_communities_base = len(cov_sup_base)
+    
+#     # Determinar número máximo de comunidades entre todos los gammas
+#     max_communities = max(len(cov_sup) for _, cov_sup in consensus_results)
+    
+#     # === PALETA DE COLORES VIVOS (NO GRISES) PARA COMUNIDADES ===
+#     # Usar colores distintivos y saturados
+#     if max_communities <= 10:
+#         # Para pocas comunidades: usar Set1 (colores muy distintivos)
+#         base_cmap = plt.cm.Set1
+#         colors = base_cmap(np.linspace(0, 0.9, max_communities))
+#     elif max_communities <= 20:
+#         # Para comunidades moderadas: tab20 (20 colores distintivos)
+#         base_cmap = plt.cm.tab20
+#         colors = base_cmap(np.linspace(0, 1, max_communities))
+#     else:
+#         # Para muchas comunidades: hsv (espectro completo)
+#         base_cmap = plt.cm.hsv
+#         colors = base_cmap(np.linspace(0, 0.95, max_communities))
+    
+#     # Asegurar que NO haya grises en la paleta de comunidades
+#     # Reemplazar colores demasiado grises (saturación baja) con colores vivos
+#     for i in range(len(colors)):
+#         r, g, b, a = colors[i]
+#         # Calcular saturación (diferencia entre max y min de RGB)
+#         max_rgb = max(r, g, b)
+#         min_rgb = min(r, g, b)
+#         saturation = max_rgb - min_rgb
+        
+#         # Si saturación es muy baja (color grisáceo), reemplazar con color vivo
+#         if saturation < 0.3:
+#             # Generar color aleatorio vivo basado en índice
+#             hue = (i * 137.5) % 360  # Proporción áurea para distribución uniforme
+#             colors[i] = plt.cm.hsv(hue / 360.0)
+    
+#     # === PASO 1: ORDENAR NODOS EN EJE Y ===
+#     # Por cada comunidad: primero núcleos, luego solapados
+#     node_order = []
+#     community_boundaries = [0]
+#     node_to_base_community = {}
+    
+#     for comm_idx, (inf_base, sup_base) in enumerate(zip(cov_inf_base, cov_sup_base)):
+#         # 1. Núcleos de esta comunidad (coverage_inf)
+#         core_nodes = sorted(set(inf_base))
+#         node_order.extend(core_nodes)
+        
+#         for node in core_nodes:
+#             node_to_base_community[node] = comm_idx
+        
+#         # 2. Solapados de esta comunidad (en sup pero no en inf)
+#         overlap_nodes = sorted(set(sup_base) - set(inf_base))
+#         node_order.extend(overlap_nodes)
+        
+#         for node in overlap_nodes:
+#             if node not in node_to_base_community:
+#                 node_to_base_community[node] = comm_idx
+        
+#         # Marcar fin de esta comunidad
+#         community_boundaries.append(len(node_order))
+    
+#     # Nodos no asignados en la base (opcional, al final)
+#     all_nodes = set()
+#     for sup in cov_sup_base:
+#         all_nodes.update(sup)
+    
+#     max_node = max(all_nodes) if all_nodes else 0
+#     assigned_nodes = set(node_order)
+#     remaining_nodes = sorted(set(range(max_node + 1)) - assigned_nodes)
+#     node_order.extend(remaining_nodes)
+    
+#     n_ordered_nodes = len(node_order)
+    
+#     # === PASO 2: CREAR MATRIZ DE COLORES ===
+#     # Para cada (nodo, gamma) determinar color
+#     color_matrix = np.ones((n_ordered_nodes, n_gammas, 3))
+    
+#     for gamma_idx, (cov_inf, cov_sup) in enumerate(consensus_results):
+#         for ordered_idx, node in enumerate(node_order):
+#             # Buscar en qué comunidades está el nodo en ESTE gamma
+#             communities_with_node = []
+#             is_core_in_any = False
+#             core_community = None
+            
+#             for comm_idx, (inf, sup) in enumerate(zip(cov_inf, cov_sup)):
+#                 if node in sup:
+#                     communities_with_node.append(comm_idx)
+#                     if node in inf:
+#                         is_core_in_any = True
+#                         core_community = comm_idx
+            
+#             n_comms = len(communities_with_node)
+            
+#             # Determinar color
+#             if n_comms == 0:
+#                 # No asignado: blanco
+#                 color_matrix[ordered_idx, gamma_idx] = [1, 1, 1]
+                
+#             elif is_core_in_any:
+#                 # Es NÚCLEO en este gamma: color VIVO de la comunidad
+#                 color_matrix[ordered_idx, gamma_idx] = colors[core_community][:3]
+                
+#             else:
+#                 # Es SOLAPADO en este gamma: GRIS
+#                 if n_comms == 1:
+#                     # En una sola comunidad (pero no es núcleo)
+#                     # Gris muy claro
+#                     intensity = 0.75
+#                     color_matrix[ordered_idx, gamma_idx] = [intensity, intensity, intensity]
+#                 else:
+#                     # En múltiples comunidades: gris más oscuro según cantidad
+#                     # Escala de grises: de 0.7 (claro, 2 comunidades) a 0.2 (oscuro, muchas)
+#                     intensity = max(0.2, 0.8 - (n_comms / max_communities) * 0.6)
+#                     color_matrix[ordered_idx, gamma_idx] = [intensity, intensity, intensity]
+    
+#     # === PASO 3: CREAR FIGURA ===
+#     fig, ax = plt.subplots(figsize=figsize)
+    
+#     # Mostrar matriz
+#     ax.imshow(color_matrix, aspect='auto', interpolation='nearest')
+    
+#     # === PASO 4: CONFIGURAR EJES ===
+#     # Eje Y (nodos agrupados por comunidades)
+#     ax.set_ylabel('Nodos (por comunidad)', fontsize=14, fontweight='bold')
+    
+#     # Etiquetas de nodos
+#     if n_ordered_nodes <= 100:
+#         tick_step = max(1, n_ordered_nodes // 25)
+#         y_ticks = list(range(0, n_ordered_nodes, tick_step))
+#         y_labels = [f'{node_order[i]}' for i in y_ticks]
+#         ax.set_yticks(y_ticks)
+#         ax.set_yticklabels(y_labels, fontsize=8)
+    
+#     # Líneas separadoras entre comunidades
+#     for boundary in community_boundaries[1:-1]:
+#         if boundary < n_ordered_nodes:
+#             ax.axhline(y=boundary - 0.5, color='black', linewidth=2.5, 
+#                       linestyle='-', alpha=0.6)
+    
+#     # Eje X (gamma)
+#     ax.set_xlabel('Gamma (← Más solapamiento | Menos solapamiento →)', 
+#                   fontsize=14, fontweight='bold')
+#     ax.set_xticks(range(n_gammas))
+#     ax.set_xticklabels([f'{g:.2f}' for g in gamma_values], fontsize=12)
+    
+#     # Título
+#     ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
+    
+#     # Grid vertical sutil
+#     ax.set_xticks(np.arange(n_gammas) - 0.5, minor=True)
+#     ax.grid(which='minor', axis='x', color='black', linewidth=1, alpha=0.3)
+    
+#     # === PASO 5: LEYENDA MEJORADA ===
+#     legend_elements = []
+    
+#     # Mostrar colores de comunidades (máximo 12 para no saturar)
+#     n_show = min(n_communities_base, 12)
+#     for comm_idx in range(n_show):
+#         legend_elements.append(
+#             mpatches.Patch(
+#                 facecolor=colors[comm_idx],
+#                 edgecolor='black',
+#                 linewidth=0.5,
+#                 label=f'C{comm_idx}'
+#             )
+#         )
+    
+#     if n_communities_base > n_show:
+#         legend_elements.append(
+#             mpatches.Patch(
+#                 facecolor='white',
+#                 edgecolor='black',
+#                 hatch='///',
+#                 label=f'... +{n_communities_base - n_show} más'
+#             )
+#         )
+    
+#     # Separador visual
+#     legend_elements.append(
+#         mpatches.Patch(
+#             facecolor='none',
+#             edgecolor='none',
+#             label='―――――――――'
+#         )
+#     )
+    
+#     # Escala de grises para solapamiento
+#     gray_levels = [
+#         (0.75, '1-2 comunidades'),
+#         (0.50, '3-4 comunidades'),
+#         (0.25, '5+ comunidades')
+#     ]
+    
+#     for gray_val, label in gray_levels:
+#         legend_elements.append(
+#             mpatches.Patch(
+#                 facecolor=[gray_val, gray_val, gray_val],
+#                 edgecolor='black',
+#                 linewidth=0.5,
+#                 label=label
+#             )
+#         )
+    
+#     # No asignado
+#     legend_elements.append(
+#         mpatches.Patch(
+#             facecolor='white',
+#             edgecolor='black',
+#             linewidth=0.5,
+#             label='No asignado'
+#         )
+#     )
+    
+#     # Etiquetas de comunidades en el eje Y
+#     for comm_idx in range(n_communities_base):
+#         if comm_idx < len(community_boundaries) - 1:
+#             start = community_boundaries[comm_idx]
+#             end = community_boundaries[comm_idx + 1]
+#             if end > start:
+#                 mid = (start + end) / 2
+#                 ax.text(-0.8, mid, f'C{comm_idx}', 
+#                        ha='right', va='center', fontsize=11, fontweight='bold',
+#                        bbox=dict(boxstyle='round,pad=0.4', 
+#                                 facecolor=colors[comm_idx], 
+#                                 alpha=0.7, 
+#                                 edgecolor='black', 
+#                                 linewidth=1.5))
+    
+#     # Posicionar leyenda
+#     ax.legend(
+#         handles=legend_elements,
+#         bbox_to_anchor=(1.15, 1),
+#         loc='upper left',
+#         fontsize=9,
+#         title='Comunidades y Solapamiento',
+#         title_fontsize=10,
+#         frameon=True,
+#         fancybox=True,
+#         shadow=True,
+#         ncol=1
+#     )
+    
+#     plt.tight_layout()
+    
+#     # Guardar
+#     if output_path:
+#         plt.savefig(output_path, dpi=300, bbox_inches='tight')
+#         print(f"✅ Visualización guardada: {output_path}")
+    
+#     plt.show()
+    
+#     return fig, ax
