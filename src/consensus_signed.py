@@ -205,18 +205,18 @@ def validate_and_fix_community_folder(folder_path: str, fixed_suffix: str = "_fi
 
         if isinstance(data, np.ndarray):
             if data.ndim == 1 and np.issubdtype(data.dtype, np.integer):
-                print(f"[!] Corrigiendo vector de etiquetas: {fname}")
+                # print(f"[!] Corrigiendo vector de etiquetas: {fname}")
                 partition = convert_labels_to_partition(data)
             elif data.ndim == 1 and all(isinstance(c, list) for c in data.tolist()):
-                print(f"[✓] Partición válida encontrada: {fname}")
+                # print(f"[✓] Partición válida encontrada: {fname}")
                 partition = data.tolist()
             elif is_valid_partition(data.tolist()):
-                print(f"[✓] Partición válida encontrada: {fname}")
+                # print(f"[✓] Partición válida encontrada: {fname}")
                 partition = data.tolist()
             else:
                 raise ValueError(f"[✘] Estructura inválida en {fname}")
         elif is_valid_partition(data):
-            print(f"[✓] Partición válida encontrada: {fname}")
+            # print(f"[✓] Partición válida encontrada: {fname}")
             partition = data
         else:
             raise ValueError(f"[✘] Estructura inválida en {fname}")
