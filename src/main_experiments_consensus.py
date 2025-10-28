@@ -141,22 +141,23 @@ def main():
 
             print(f"✅ Resultados guardados en: {out_folder}")
         
-            # ============= VISUALIZACIÓN DE EVOLUCIÓN POR GAMMA =============
-            print(f"\n📊 Generando visualización de evolución por gamma (α={gamma})...")
+        # ============= VISUALIZACIÓN DE EVOLUCIÓN POR GAMMA =============
+        # ⚠️ ESTO VA AQUÍ, FUERA DEL BUCLE DE GAMMA ⚠️
+        print(f"\n📊 Generando visualización de evolución por alpha (α={alpha}) y los gamma (γ={GAMMA_VALUES})...")
 
-            evolution_folder = os.path.join(OUTPUT_BASE, f"evolution_alpha_{gamma}")
-            os.makedirs(evolution_folder, exist_ok=True)
-            
-            plot_community_evolution_across_gamma(
-                gamma_values=GAMMA_VALUES,
-                consensus_results=consensus_results_for_alpha,
-                output_path=os.path.join(evolution_folder, f"gamma_evolution_alpha_{gamma}.png"),
-                title=f"Evolución de Comunidades según Gamma (α={gamma})",
-                figsize=(16, 12),
-                reverse_gamma=True  # Mostrar de más riguroso a más flexible
-            )
-            
-            print(f"✅ Visualización de evolución guardada en: {evolution_folder}")
+        evolution_folder = os.path.join(OUTPUT_BASE, f"evolution_gamma_{GAMMA_VALUES}_alpha_{alpha}")
+        os.makedirs(evolution_folder, exist_ok=True)
+        
+        plot_community_evolution_across_gamma(
+            gamma_values=GAMMA_VALUES,
+            consensus_results=consensus_results_for_alpha,
+            output_path=os.path.join(evolution_folder, f"evolution__gamma_{GAMMA_VALUES}_alpha_{alpha}.png"),
+            title=f"Evolución de Comunidades según Gamma (α={GAMMA_VALUES})",
+            figsize=(16, 12),
+            reverse_gamma=True  # Mostrar de más riguroso a más flexible
+        )
+        
+        print(f"✅ Visualización de evolución guardada en: {evolution_folder}")
     
     print(f"\n{'='*70}")
     print("🎉 TODOS LOS EXPERIMENTOS COMPLETADOS")
