@@ -23,9 +23,9 @@ import pandas as pd
 import re
 
 # === CONFIGURACIÓN GENERAL ===
-R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_400_resting_state.npy"
-COMMUNITIES_FOLDER = "communities/granularity_400/"
-OUTPUT_BASE = "output_experiments_signed_400"
+R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
+COMMUNITIES_FOLDER = "communities/granularity_100/"
+OUTPUT_BASE = "output_experiments_signed_100"
 
 # === PARÁMETROS A PROBAR ===
 GAMMA_VALUES = [0.3, 0.5, 0.7]
@@ -141,22 +141,22 @@ def main():
 
             print(f"✅ Resultados guardados en: {out_folder}")
         
-        # ============= VISUALIZACIÓN DE EVOLUCIÓN POR GAMMA =============
-        print(f"\n📊 Generando visualización de evolución por gamma (α={alpha})...")
-        
-        evolution_folder = os.path.join(OUTPUT_BASE, f"evolution_alpha_{alpha}")
-        os.makedirs(evolution_folder, exist_ok=True)
-        
-        plot_community_evolution_across_gamma(
-            gamma_values=GAMMA_VALUES,
-            consensus_results=consensus_results_for_alpha,
-            output_path=os.path.join(evolution_folder, f"gamma_evolution_alpha_{alpha}.png"),
-            title=f"Evolución de Comunidades según Gamma (α={alpha})",
-            figsize=(16, 12),
-            reverse_gamma=True  # Mostrar de más riguroso a más flexible
-        )
-        
-        print(f"✅ Visualización de evolución guardada en: {evolution_folder}")
+            # ============= VISUALIZACIÓN DE EVOLUCIÓN POR GAMMA =============
+            print(f"\n📊 Generando visualización de evolución por gamma (α={gamma})...")
+
+            evolution_folder = os.path.join(OUTPUT_BASE, f"evolution_alpha_{gamma}")
+            os.makedirs(evolution_folder, exist_ok=True)
+            
+            plot_community_evolution_across_gamma(
+                gamma_values=GAMMA_VALUES,
+                consensus_results=consensus_results_for_alpha,
+                output_path=os.path.join(evolution_folder, f"gamma_evolution_alpha_{gamma}.png"),
+                title=f"Evolución de Comunidades según Gamma (α={gamma})",
+                figsize=(16, 12),
+                reverse_gamma=True  # Mostrar de más riguroso a más flexible
+            )
+            
+            print(f"✅ Visualización de evolución guardada en: {evolution_folder}")
     
     print(f"\n{'='*70}")
     print("🎉 TODOS LOS EXPERIMENTOS COMPLETADOS")
