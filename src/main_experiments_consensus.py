@@ -23,9 +23,9 @@ import pandas as pd
 import re
 
 # === CONFIGURACIÓN GENERAL ===
-R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_100_resting_state.npy"
-COMMUNITIES_FOLDER = "communities/granularity_100/"
-OUTPUT_BASE = "output_experiments_signed_100"
+R_FILE = "dataConnectome/fcs_ts_DZ_63_schaefer_subc_400_resting_state.npy"
+COMMUNITIES_FOLDER = "communities/granularity_400/"
+OUTPUT_BASE = "output_experiments_signed_400"
 
 # === PARÁMETROS A PROBAR ===
 GAMMA_VALUES = [0.3, 0.5, 0.7]
